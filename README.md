@@ -4,9 +4,13 @@ CD9 Project For S.D. I
 To Install everything needed for this initial project follow the steps below(asssuming that you are using debian or ubuntu OS)
 
 1.) Switch user to root to properly run the function below
+
 2.) Make sure that you have setuptools if not download this first
+
 3.) Copy and paste the function below
+
 4.) Make sure that you run the function in the same folder where the cd9 requirement list is located or it won't properly work
+
 	function CD9_Install()
 	{
 		echo "Installing PIP..... "
