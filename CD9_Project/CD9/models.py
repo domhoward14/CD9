@@ -40,6 +40,8 @@ class App_list(models.Model):
     appName = models.CharField(max_length=50)
     installDate = models.DateTimeField()
 
+#Also see how feasible it is to include contact names for texts, calls, etc ...
+
 class Phone_Calls(models.Model):
     number = models.IntegerField()
     convoTime = models.IntegerField()
@@ -48,6 +50,7 @@ class Phone_Calls(models.Model):
 class Texts(models.Model):
     number = models.IntegerField()
     date = models.DateTimeField()
+    content = models.CharField(max_length=160)
 
 class Photo_Messages(models.Model):
     number = models.IntegerField()
@@ -76,7 +79,8 @@ class Total(models.Model):
     totalSites = models.IntegerField()
 
 class UserProfile(models.Model):
-    #user = models.OneToOneField(User)
+    #user = models.OneToOneField(User)    url(r'^', include(''))
+
     email = models.CharField(unique=True, max_length=100)
     parent = models.ForeignKey(User, on_delete=models.CASCADE, null=True)
     isTeenager = models.BooleanField(default=False)
