@@ -50,7 +50,8 @@ class Phone_Calls(models.Model):
 class Texts(models.Model):
     number = models.IntegerField()
     date = models.DateTimeField()
-    content = models.CharField(max_length=160)
+    content = models.CharField(max_length=160, default='default_text')
+    owner = models.ForeignKey('auth.User', related_name='Texts')
 
 class Photo_Messages(models.Model):
     number = models.IntegerField()
@@ -79,11 +80,11 @@ class Total(models.Model):
     totalSites = models.IntegerField()
 
 class UserProfile(models.Model):
-    #user = models.OneToOneField(User)    url(r'^', include(''))
-
+    user = models.OneToOneField(User, related_name='User')
     email = models.CharField(unique=True, max_length=100)
-    parent = models.ForeignKey(User, on_delete=models.CASCADE, null=True)
+    parent = models.ForeignKey(User, on_delete=models.CASCADE, null=True, related_name='parent')
     isTeenager = models.BooleanField(default=False)
+    fb_token = models.CharField(null=True, default='default_text', max_length=512)
 
     def __unicode__(self):
         return self.user.username

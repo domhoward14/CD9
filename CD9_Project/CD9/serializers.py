@@ -1,15 +1,14 @@
 from rest_framework import serializers
-from models import Texts
+from models import Texts,UserProfile
 
-class TextSerializer(serializers.Serializer):
-    number = serializers.IntegerField()
-    date = serializers.DateTimeField()
+class TextSerializer(serializers.ModelSerializer):
+    owner = serializers.ReadOnlyField(source='owner.username')
+    class Meta:
+        model = Texts
+        fields = ('number', 'date', 'content', 'owner')
 
-    def create(self, validated_data):
-        return Texts.objects.create(**validated_data)
 
-    def update(self, instance, validated_data):
-        instance.number = validated_data.get('number', instance.number)
-        instance.date = validated_data.get('date', instance.date)
-        instance.save()
-        return instance
+class UserProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserProfile
+        fields = ('user', 'email', 'fb_token')
