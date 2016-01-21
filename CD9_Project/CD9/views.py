@@ -1,5 +1,9 @@
+import json
+from django.contrib.auth.models import User
 from django.shortcuts import render
 from django.http import HttpResponse
+from django.views.decorators.csrf import csrf_exempt
+import requests
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -101,4 +105,66 @@ class WebHistory(generics.CreateAPIView):
     #permission_classes = (permissions.IsAuthenticated,)
     queryset = Web_History.objects.all()
     serializer_class = WebHistorySerializer
+"""
+This needs to be turned into the token updater
+@csrf_exempt
+def tokenAuthenticator(request):
+    json_data = request.body
+    parsed_data = json.loads(json_data)
+    token = parsed_data.get("token", "There was no token !")
+    password = parsed_data.get("password", "")
+    dict = {'fields' : 'name, email', 'access_token' : token}
+    r = requests.get('https://graph.facebook.com/me', params=dict)
+    parsed_data = json.loads(r.text)
+    email = parsed_data.get("email","There was an error getting the email from the dictionary")
+    name = parsed_data.get("name","error error")
+    first_name = name.split()[0]
+    last_name = name.split()[1]
+    #profile = UserProfile.objects.get_or_create(email=email)
+    try:
+        profile = User.objects.get(email=email)
+    except:
+        try:
+            profile = User.objects.create(first_name=first_name,last_name=last_name,email=email,password=password)
+            UserProfile.objects.create()
+        except:
+            return("Profile was not successfully created !")
+    if (r.status_code == 200):
 
+        return HttpResponse(str(parsed_data))
+    else:
+        return HttpResponse("There was an error with the facebook graph request.")
+"""
+@csrf_exempt
+def CreateNewUser(request):
+    json_data = request.body
+    parsed_data = json.loads(json_data)
+    password = parsed_data.get("password","Nothing")
+    token = parsed_data.get("token", "Nothing")
+    if(token == "Nothing" or password == "Nothing"):
+        return HttpResponse("There was no token or password sent in the JSON Object.")
+    else:
+        verify_results = tokenVerifier(token)
+        if(verify_results["isVerified"]):
+            dict = verify_results["facebook_dict"]
+            email = dict.get("email","")
+            name = dict.get("name","")
+            try:
+                user = User.objects.create(username=name,password=password)
+                UserProfile.objects.create(user=user, email=email, isTeenager=True, fb_token=token)
+            except:
+                return HttpResponse("The profile was not successfully created")
+        else:
+            return HttpResponse("There was an error in verifying the access token")
+        #This is where the django authentication token is created
+        return HttpResponse("This is the part where you would get a django authentication token")
+
+def tokenVerifier(token):
+    dict = {'fields' : 'name, email', 'access_token' : token}
+    r = requests.get('https://graph.facebook.com/me', params=dict)
+    parsed_data = json.loads(r.text)
+    if (r.status_code == 200):
+
+        return {"isVerified" : True, "facebook_dict" : parsed_data}
+    else:
+        return {"isVerified" : False}
