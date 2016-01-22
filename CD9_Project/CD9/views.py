@@ -14,7 +14,9 @@ from models import UserProfile, Texts, App_list, Phone_Calls, Photo_Messages, We
 from rest_framework import generics
 from rest_framework import permissions
 
-
+CD9_APP_SECRET = "87b2da14fffc70104a079c7598230b82"
+CD9_APP_ID = "193476894336866"
+FB_TOKEN_EXTENDER_URL = "https://graph.facebook.com/oauth/access_token"
 
 def index(request):
     return HttpResponse("This is where the Parent Dashboard will be located")
@@ -137,10 +139,9 @@ def tokenAuthenticator(request):
 """
 @csrf_exempt
 def CreateNewUser(request):
-    json_data = request.body
-    parsed_data = json.loads(json_data)
-    password = parsed_data.get("password","Nothing")
-    token = parsed_data.get("token", "Nothing")
+    token_dict = getToken(request)
+    password = token_dict.get("password","Nothing")
+    token = token_dict.get("token", "Nothing")
     if(token == "Nothing" or password == "Nothing"):
         return HttpResponse("There was no token or password sent in the JSON Object.")
     else:
@@ -152,12 +153,19 @@ def CreateNewUser(request):
             try:
                 user = User.objects.create(username=name,password=password)
                 UserProfile.objects.create(user=user, email=email, isTeenager=True, fb_token=token)
-            except:
-                return HttpResponse("The profile was not successfully created")
+            except Exception as e:
+                error = e.message
+                error += e.__doc__
+                return HttpResponse("The profile was not successfully created. Error : " + error)
         else:
             return HttpResponse("There was an error in verifying the access token")
         #This is where the django authentication token is created
         return HttpResponse("This is the part where you would get a django authentication token")
+
+def getToken(request):
+    json_data = request.body
+    parsed_data = json.loads(json_data)
+    return {"password" : parsed_data.get("password","Nothing"), "token" : parsed_data.get("token", "Nothing")}
 
 def tokenVerifier(token):
     dict = {'fields' : 'name, email', 'access_token' : token}
@@ -168,3 +176,47 @@ def tokenVerifier(token):
         return {"isVerified" : True, "facebook_dict" : parsed_data}
     else:
         return {"isVerified" : False}
+
+@csrf_exempt
+def TokenUpdater(request):
+    token_dict = getToken(request)
+    token = token_dict.get("token", "Nothing")
+    verify_results = tokenVerifier(token)
+    if(verify_results["isVerified"]):
+        email = verify_results["facebook_dict"].get("email","Nothing")
+        """
+        This is where the authentication token will be used to retrieve the logged in users
+        email so it can then be compared to the one received from facebook to ensure that the person
+        whoe sent the token is the same as the one logged in
+        """
+        return HttpResponse("This is the part where you would get a django authentication token")
+    else:
+        return Http404("There was an error in verifying the access token")
+
+def extendToken(token):
+    verify_results = tokenVerifier(token)
+    if(verify_results["isVerified"]):
+        email = verify_results["facebook_dict"].get("email","Nothing")
+        """
+        This is where the authentication token will be used to retrieve the logged in users
+        email so it can then be compared to the one received from facebook to ensure that the person
+        whoe sent the token is the same as the one logged in
+        """
+        dict = {"client_id" : CD9_APP_ID, "client_secret" : CD9_APP_SECRET, "grant_type" : "fb_exchange_token", "fb_exchange_token" : token}
+        response = requests.get(FB_TOKEN_EXTENDER_URL, params=dict)
+        if(response.status_code == 200):
+            token = response.text.split("=")[1].split("&")[0]
+            """"
+            This is where the token would be saved in the users database
+            """
+            return HttpResponse("This is where the token would be saved to the database and the client recieves a successful code. The token saved is : " + token)
+        else:
+            return Http404("There was an error while creating a long life token")
+    else:
+        return Http404("There was an error while authenticating the token")
+
+@csrf_exempt
+def TokenExtender(request):
+    token_dict = getToken(request)
+    return extendToken(token_dict.get("token","Nothing"))
+
