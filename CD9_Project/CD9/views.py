@@ -1,7 +1,7 @@
 import json
 from django.contrib.auth.models import User
 from django.shortcuts import render
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 import requests
 from rest_framework.views import APIView
@@ -15,6 +15,7 @@ from rest_framework import generics
 from rest_framework import permissions
 from rest_framework.authentication import SessionAuthentication, BasicAuthentication, TokenAuthentication
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.authtoken.models import Token
 
 
 
@@ -169,15 +170,23 @@ def CreateNewUser(request):
             email = dict.get("email","")
             name = dict.get("name","")
             try:
-                user = User.objects.create(username=name,password=password)
+                user = User.objects.create(username=name,password=password, email=email)
                 UserProfile.objects.create(user=user, email=email, isTeenager=True, fb_token=token)
             except Exception as e:
                 error = e.message
                 return Http404("The profile was not successfully created. Error : " + error)
         else:
             return Http404("There was an error in verifying the access token")
-        #This is where the django authentication token is created
-        return HttpResponse("This is the part where you would get a django authentication token")
+        return JsonResponse(createToken())
+
+"""
+Responsible for creating the django authentication token for
+the validated user.
+"""
+def createToken(user):
+    token = Token.objects.create(user=user)
+    token_dictionary = {"token" : token.key}
+    return token_dictionary
 
 def getToken(request):
     json_data = request.body
@@ -194,8 +203,11 @@ def tokenVerifier(token):
     else:
         return {"isVerified" : False}
 
+"""
+This is the view function that handles the request
+to update the token.
+"""
 @csrf_exempt
-
 def TokenUpdater(request):
     token_dict = getToken(request)
     token = token_dict.get("token", "Nothing")
@@ -203,13 +215,43 @@ def TokenUpdater(request):
     if(verify_results["isVerified"]):
         email = verify_results["facebook_dict"].get("email","Nothing")
         """
-        This is where the authentication token will be used to retrieve the logged in users
-        email so it can then be compared to the one received from facebook to ensure that the person
-        whoe sent the token is the same as the one logged in
+        This part may be revised if we find that there may be any
+        security risks with only accepting the token as authenticating input
         """
-        return HttpResponse("This is the part where you would get a django authentication token")
+        user_dict = getUser(email)
+        if(user_dict.get("success") != True):
+            return Http404("email associated with this token is not valid.")
+        user = user_dict.get("user")
+        return JsonResponse(updateToken(user))
     else:
         return Http404("There was an error in verifying the access token")
+
+"""
+This is the helper function for TokenUpdater
+"""
+def updateToken(user):
+
+    token = Token.objects.get(user=user)
+    token = Token.objects.get(user=user)
+    token.delete()
+    token = createToken(user=user)
+    return token
+
+def getUser(email):
+
+    try:
+        user = User.objects.get(email=email)
+
+    except Exception as e:
+        dict = {"success" : False}
+        return dict
+
+    dict = {"success" : True, "user" : user}
+    return dict
+
+
+
+
 
 def extendToken(token):
     verify_results = tokenVerifier(token)
