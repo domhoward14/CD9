@@ -13,6 +13,10 @@ from serializers import UserProfileSerializer, TextSerializer, AppSerializer, Ph
 from models import UserProfile, Texts, App_list, Phone_Calls, Photo_Messages, Web_History
 from rest_framework import generics
 from rest_framework import permissions
+from rest_framework.authentication import SessionAuthentication, BasicAuthentication, TokenAuthentication
+from rest_framework.permissions import IsAuthenticated
+
+
 
 CD9_APP_SECRET = "87b2da14fffc70104a079c7598230b82"
 CD9_APP_ID = "193476894336866"
@@ -25,13 +29,15 @@ class UserProfileList(generics.CreateAPIView):
 
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user)
-    #When the authentication step is ready
-    #permission_classes = (permissions.IsAuthenticatedOrReadOnly,)
+    permission_classes = (IsAuthenticated,)
+    authentication_classes = (TokenAuthentication,)
     queryset = UserProfile.objects.all()
     serializer_class = UserProfileSerializer
 
 class UpdateUserProfile(generics.UpdateAPIView):
 
+    permission_classes = (IsAuthenticated,)
+    authentication_classes = (TokenAuthentication,)
     queryset = UserProfile.objects.all()
     serializer_class = UserProfileSerializer
 
@@ -55,11 +61,15 @@ class TextsUpdate(generics.UpdateAPIView):
 
         return Response(serializer.data)
     """
+    permission_classes = (IsAuthenticated,)
+    authentication_classes = (TokenAuthentication,)
     queryset = Texts.objects.all()
     serializer_class = TextSerializer
 
 class Texts(generics.CreateAPIView):
 
+    permission_classes = (IsAuthenticated,)
+    authentication_classes = (TokenAuthentication,)
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user)
 
@@ -70,6 +80,8 @@ class Texts(generics.CreateAPIView):
 
 class Apps(generics.CreateAPIView):
 
+    permission_classes = (IsAuthenticated,)
+    authentication_classes = (TokenAuthentication,)
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user)
 
@@ -80,6 +92,8 @@ class Apps(generics.CreateAPIView):
 
 class PhoneCall(generics.CreateAPIView):
 
+    permission_classes = (IsAuthenticated,)
+    authentication_classes = (TokenAuthentication,)
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user)
 
@@ -90,6 +104,8 @@ class PhoneCall(generics.CreateAPIView):
 
 class PhotoMessages(generics.CreateAPIView):
 
+    permission_classes = (IsAuthenticated,)
+    authentication_classes = (TokenAuthentication,)
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user)
 
@@ -100,6 +116,8 @@ class PhotoMessages(generics.CreateAPIView):
 
 class WebHistory(generics.CreateAPIView):
 
+    permission_classes = (IsAuthenticated,)
+    authentication_classes = (TokenAuthentication,)
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user)
 
@@ -143,7 +161,7 @@ def CreateNewUser(request):
     password = token_dict.get("password","Nothing")
     token = token_dict.get("token", "Nothing")
     if(token == "Nothing" or password == "Nothing"):
-        return HttpResponse("There was no token or password sent in the JSON Object.")
+        return Http404("There was no token or password sent in the JSON Object.")
     else:
         verify_results = tokenVerifier(token)
         if(verify_results["isVerified"]):
@@ -155,10 +173,9 @@ def CreateNewUser(request):
                 UserProfile.objects.create(user=user, email=email, isTeenager=True, fb_token=token)
             except Exception as e:
                 error = e.message
-                error += e.__doc__
-                return HttpResponse("The profile was not successfully created. Error : " + error)
+                return Http404("The profile was not successfully created. Error : " + error)
         else:
-            return HttpResponse("There was an error in verifying the access token")
+            return Http404("There was an error in verifying the access token")
         #This is where the django authentication token is created
         return HttpResponse("This is the part where you would get a django authentication token")
 
@@ -178,6 +195,7 @@ def tokenVerifier(token):
         return {"isVerified" : False}
 
 @csrf_exempt
+
 def TokenUpdater(request):
     token_dict = getToken(request)
     token = token_dict.get("token", "Nothing")
@@ -219,4 +237,10 @@ def extendToken(token):
 def TokenExtender(request):
     token_dict = getToken(request)
     return extendToken(token_dict.get("token","Nothing"))
+
+class UserList(generics.ListCreateAPIView):
+    queryset = UserProfile.objects.all()
+    serializer_class = UserProfileSerializer
+    permission_classes = (IsAuthenticated,)
+    authentication_classes = (TokenAuthentication,)
 

@@ -1,4 +1,5 @@
 from django.conf.urls import patterns, url
+import rest_framework.authtoken
 import views
 
 
@@ -11,6 +12,6 @@ urlpatterns = patterns('',
         url(r'^api/new_user/$', views.CreateNewUser),
         url(r'^api/verify/$', views.TokenUpdater),
         url(r'^api/extend/$', views.TokenExtender),
-
+        url(r'^api/userlist/$', views.UserList.as_view()),
     )
 
