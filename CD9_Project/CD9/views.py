@@ -177,7 +177,7 @@ def CreateNewUser(request):
                 return Http404("The profile was not successfully created. Error : " + error)
         else:
             return Http404("There was an error in verifying the access token")
-        return JsonResponse(createToken())
+        return JsonResponse(createToken(user))
 
 """
 Responsible for creating the django authentication token for
