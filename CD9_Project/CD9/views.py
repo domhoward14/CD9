@@ -285,7 +285,10 @@ def extendToken(token):
             """"
             This is where the token would be saved in the users database
             """
-            return HttpResponse("This is where the token would be saved to the database and the client recieves a successful code. The token saved is : " + token)
+            user = UserProfile.objects.get(email=email)
+            user.fb_token = token
+            user.save()
+            return HttpResponse("The token was successfully updated and saved !")
         else:
             raise Http404("There was an error while creating a long life token")
     else:
