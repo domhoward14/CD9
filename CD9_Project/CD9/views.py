@@ -1,4 +1,6 @@
 import json
+import random
+from string import digits, ascii_uppercase, ascii_lowercase
 from django.contrib.auth.models import User
 from django.shortcuts import render
 from django.http import HttpResponse, JsonResponse
@@ -16,6 +18,7 @@ from rest_framework import permissions
 from rest_framework.authentication import SessionAuthentication, BasicAuthentication, TokenAuthentication
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.authtoken.models import Token
+import logging
 
 
 
@@ -156,13 +159,17 @@ def tokenAuthenticator(request):
     else:
         return HttpResponse("There was an error with the facebook graph request.")
 """
+
 @csrf_exempt
 def CreateNewUser(request):
     token_dict = getToken(request)
+    """
+    **Current flow design does not require a password input from the client**
     password = token_dict.get("password","Nothing")
+    """
     token = token_dict.get("token", "Nothing")
-    if(token == "Nothing" or password == "Nothing"):
-        return Http404("There was no token or password sent in the JSON Object.")
+    if(token == "Nothing"):
+        raise Http404("There was no token sent in the JSON Object.")
     else:
         verify_results = tokenVerifier(token)
         if(verify_results["isVerified"]):
@@ -170,14 +177,24 @@ def CreateNewUser(request):
             email = dict.get("email","")
             name = dict.get("name","")
             try:
+                password = generatePassword()
                 user = User.objects.create(username=name,password=password, email=email)
                 UserProfile.objects.create(user=user, email=email, isTeenager=True, fb_token=token)
             except Exception as e:
                 error = e.message
-                return Http404("The profile was not successfully created. Error : " + error)
+                raise Http404("The profile was not successfully created. Error : " + error)
         else:
-            return Http404("There was an error in verifying the access token")
+            raise Http404("There was an error in verifying the access token")
         return JsonResponse(createToken(user))
+"""
+Utility function to make a quick secure password. More of a
+dummy password since all the authentication is done via social
+media
+"""
+def generatePassword():
+    charset = digits + ascii_uppercase + ascii_lowercase
+    return ''.join(random.choice(charset) for _ in range(50))
+
 
 """
 Responsible for creating the django authentication token for
@@ -198,7 +215,6 @@ def tokenVerifier(token):
     r = requests.get('https://graph.facebook.com/me', params=dict)
     parsed_data = json.loads(r.text)
     if (r.status_code == 200):
-
         return {"isVerified" : True, "facebook_dict" : parsed_data}
     else:
         return {"isVerified" : False}
@@ -220,11 +236,11 @@ def TokenUpdater(request):
         """
         user_dict = getUser(email)
         if(user_dict.get("success") != True):
-            return Http404("email associated with this token is not valid.")
+            raise Http404("email associated with this token is not valid.")
         user = user_dict.get("user")
         return JsonResponse(updateToken(user))
     else:
-        return Http404("There was an error in verifying the access token")
+        raise Http404("There was an error in verifying the access token")
 
 """
 This is the helper function for TokenUpdater
@@ -271,9 +287,9 @@ def extendToken(token):
             """
             return HttpResponse("This is where the token would be saved to the database and the client recieves a successful code. The token saved is : " + token)
         else:
-            return Http404("There was an error while creating a long life token")
+            raise Http404("There was an error while creating a long life token")
     else:
-        return Http404("There was an error while authenticating the token")
+        raise Http404("There was an error while authenticating the token")
 
 @csrf_exempt
 def TokenExtender(request):
