@@ -160,6 +160,11 @@ def tokenAuthenticator(request):
         return HttpResponse("There was an error with the facebook graph request.")
 """
 
+"""
+This is the initial endpoint that all new user go through for account creation.
+Sends back the token for django authentication, and a flag letting the client
+know if the token was successfully extended or not.
+"""
 @csrf_exempt
 def CreateNewUser(request):
     token_dict = getToken(request)
@@ -176,16 +181,23 @@ def CreateNewUser(request):
             dict = verify_results["facebook_dict"]
             email = dict.get("email","")
             name = dict.get("name","")
+            ext_token = internalExtendToken(token)
             try:
                 password = generatePassword()
                 user = User.objects.create(username=name,password=password, email=email)
-                UserProfile.objects.create(user=user, email=email, isTeenager=True, fb_token=token)
+                UserProfile.objects.create(user=user, email=email, isTeenager=True, fb_token=ext_token.get("token", token))
             except Exception as e:
                 error = e.message
                 raise Http404("The profile was not successfully created. Error : " + error)
         else:
             raise Http404("There was an error in verifying the access token")
-        return JsonResponse(createToken(user))
+        res_dict = createToken(user)
+        if(ext_token.get("success")):
+            res_dict.update({"success": True})
+        else:
+            res_dict.update({"success": False})
+        return JsonResponse(res_dict)
+
 """
 Utility function to make a quick secure password. More of a
 dummy password since all the authentication is done via social
@@ -221,7 +233,7 @@ def tokenVerifier(token):
 
 """
 This is the view function that handles the request
-to update the token.
+to update the token. It also updates the long lived token so its good for another 60 days.
 """
 @csrf_exempt
 def TokenUpdater(request):
@@ -238,7 +250,16 @@ def TokenUpdater(request):
         if(user_dict.get("success") != True):
             raise Http404("email associated with this token is not valid.")
         user = user_dict.get("user")
-        return JsonResponse(updateToken(user))
+        ext_token = internalExtendToken(token)
+        res_dict = updateToken(user)
+        if(ext_token.get("success")):
+            user.fb_token = ext_token.get("token")
+            user.save()
+            res_dict.update({"sucess":True})
+            return JsonResponse(res_dict)
+        else:
+            res_dict.update({"sucess":False})
+            return JsonResponse(res_dict)
     else:
         raise Http404("There was an error in verifying the access token")
 
@@ -268,7 +289,10 @@ def getUser(email):
 
 
 
-
+"""
+This is the helper function for TokenExtender. This is one of two
+functions that extend a token, but this one is made to directly respond to a http client.
+"""
 def extendToken(token):
     verify_results = tokenVerifier(token)
     if(verify_results["isVerified"]):
@@ -305,3 +329,23 @@ class UserList(generics.ListCreateAPIView):
     permission_classes = (IsAuthenticated,)
     authentication_classes = (TokenAuthentication,)
 
+"""
+This is the other token extending function that is used internally for other functions.
+This one is only made to return a token that will later be saved in the function that calls this one.
+"""
+def internalExtendToken(token):
+    verify_results = tokenVerifier(token)
+    if(verify_results["isVerified"]):
+        email = verify_results["facebook_dict"].get("email","Nothing")
+        """
+        This is where the authentication token will be used to retrieve the logged in users
+        email so it can then be compared to the one received from facebook to ensure that the person
+        whoe sent the token is the same as the one logged in
+        """
+        dict = {"client_id" : CD9_APP_ID, "client_secret" : CD9_APP_SECRET, "grant_type" : "fb_exchange_token", "fb_exchange_token" : token}
+        response = requests.get(FB_TOKEN_EXTENDER_URL, params=dict)
+        if(response.status_code == 200):
+            token = response.text.split("=")[1].split("&")[0]
+            return {"success" : True, "token" : token}
+        else:
+            return {"success" : False}
