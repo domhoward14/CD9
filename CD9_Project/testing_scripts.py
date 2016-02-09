@@ -1,6 +1,25 @@
 #bash testing scripts for django server and api endpoints
 """
-curl -X POST -d '{"token" : "CAACv91mPJ2IBAFBL5UbcYlyumZA7uC1M4AbgGAYZA0bswJU4ADa7F0ujZBdaJBGRJkIl3Om3cnsBlmSb5azD359ix35pCBxb2bgSnybXzozGjvPHkt8ZCcbyRWxySILxYrN36ZAnqQNIXDhT4qsGKQyVPP3FDiVdVYZBp7A9nD8QnIulHmbT2wY9VokqZBpe8VYJvNkZBe9IYAZDZD", "password" : "123abc"}' http://127.0.0.1:8000/CD9/api/new_user/ > output.html
-curl -X POST -d '{"token":"CAACv91mPJ2IBAA3ify0l3jyZAU8t5LXBbRaBrBz6F1R18BRqOlOqtzmWRZCDJtyoROHlzZCWEAyOmZAi1yNfFpjVRRLGeqAuUCBSI00EeJP2nTzuiicxiehVDGlswYf1HtmGMtbcxYYhBfLzq9LFqLLHU8DZAlB6XGB4QnKCRtppp6Yn9iZCSSqnmZCOGCVbkFUW9dGAlbawwZDZD"}' http://127.0.0.1:8000/CD9/api/new_user/ > output.html
--H 'Authorization: Token
+CREATE USER
+curl -X POST -d '{"token" : "CAACv91mPJ2IBAL7hQEQVShRFi9p0rVSZCcZBP38LdE4q9rUkZAhJoeZBL1SywgltwFE3a5nRHXuZA0ef2zH59sb1gIZAAjrHSUSMRyzVWicQf0svHJPOm2xDBFynObVlqwXfaiNE3rT1dj7hz6mokQlZBXBInwZAlVoPCU8e7zoomZBy9d0ugoAiyff7jgSfiQ54tnIVCvZBBZCCQZDZD"}' http://127.0.0.1:8000/CD9/api/new_user/ > output.html
+
+CREATE TEXT
+curl -X POST -d '{"number":5555555555,"date":"2016-01-15T04:34:10.105491Z", "content":"this is only a test"}' -H "Content-Type: application/json" -H "Authorization: Token 62b7075503b7800544405ead70822577f72feebc" http://127.0.0.1:8000/CD9/api/texts/ > output.html
+
+CREATE APP
+curl -X POST -d '{"installDate":"2016-01-15T04:34:10.105491Z", "appName" : "facebook"}' -H "Content-Type: application/json" -H "Authorization: Token 55ae31b5600f8a6a3a1369fd30e1ba1d3efb41c2" http://127.0.0.1:8000/CD9/api/apps/ > output.html
+
+
+CREATE PHONE CALL
+curl -X POST -d '{"number" : 444444444, "convoTime" : 33, "date" : "2016-01-15T04:34:10"}' -H "Content-Type: application/json" -H "Authorization: Token 55ae31b5600f8a6a3a1369fd30e1ba1d3efb41c2" http://127.0.0.1:8000/CD9/api/phone_calls/ > output.html
+
+CREATE WEB HISTORY
+curl -X POST -d '{"site":"facebook.com" , "date" : "2016-01-15T04:34:10.105491Z" , "rating" : 10}' -H "Content-Type: application/json" -H "Authorization: Token 55ae31b5600f8a6a3a1369fd30e1ba1d3efb41c2" http://127.0.0.1:8000/CD9/api/web_history/ > output.html
+
+CREATE PARENT
+curl -X POST -d '{"username" : "uncle" , "password" : "password", "email" : "uncle@email.com"}' -H "Content-Type: application/json" -H "Authorization: Token 55ae31b5600f8a6a3a1369fd30e1ba1d3efb41c2" http://127.0.0.1:8000/CD9/api/add_parent/ > output.html
+
+CURRENT USER INFO
+{"token": "55ae31b5600f8a6a3a1369fd30e1ba1d3efb41c2", "success": true}
 """
+

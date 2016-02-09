@@ -11,7 +11,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.http import Http404
 from serializers import UserProfileSerializer, TextSerializer, AppSerializer, PhotoMessagesSerializer, \
-    PhoneCallSerializer, WebHistorySerializer
+    PhoneCallSerializer, WebHistorySerializer, UserSerializer
 from models import UserProfile, Texts, App_list, Phone_Calls, Photo_Messages, Web_History
 from rest_framework import generics
 from rest_framework import permissions
@@ -45,6 +45,20 @@ class UpdateUserProfile(generics.UpdateAPIView):
     queryset = UserProfile.objects.all()
     serializer_class = UserProfileSerializer
 
+class AddParent(generics.CreateAPIView):
+
+    def perform_create(self, serializer):
+        parent = serializer.save()
+        teenager = UserProfile.objects.get(email=self.request.user.email)
+        teenager.parent = parent
+        teenager.save()
+
+    permission_classes = (IsAuthenticated,)
+    authentication_classes = (TokenAuthentication,)
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+
+
 """
 class Texts(APIView):
 
@@ -77,8 +91,6 @@ class Texts(generics.CreateAPIView):
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user)
 
-    #When the authentication step is ready
-    #permission_classes = (permissions.IsAuthenticated,)
     queryset = Texts.objects.all()
     serializer_class = TextSerializer
 
@@ -197,6 +209,20 @@ def CreateNewUser(request):
         else:
             res_dict.update({"success": False})
         return JsonResponse(res_dict)
+
+"""
+Add a parent to a teenager profile
+
+def AddParent(request):
+    json_data = request.body
+    dict = json.loads(json_data)
+    username = dict.get("username")
+    password = dict.get("password")
+    if(username and password):
+            #do work
+    else:
+            raise Http404("Client did not send either the password or the username.")
+"""
 
 """
 Utility function to make a quick secure password. More of a
@@ -349,3 +375,7 @@ def internalExtendToken(token):
             return {"success" : True, "token" : token}
         else:
             return {"success" : False}
+
+@csrf_exempt
+def test(request):
+    return HttpResponse(request.user)
