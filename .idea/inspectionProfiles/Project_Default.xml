@@ -1,0 +1,16 @@
+<component name="InspectionProjectProfileManager">
+  <profile version="1.0" is_locked="false">
+    <option name="myName" value="Project Default" />
+    <option name="myLocal" value="false" />
+    <inspection_tool class="PyUnresolvedReferencesInspection" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="ignoredIdentifiers">
+        <list>
+          <option value="CD9_Project.testing_scripts.curl" />
+          <option value="CD9_Project.testing_scripts.POST" />
+          <option value="CD9_Project.testing_scripts.d" />
+          <option value="CD9_Project.testing_scripts.X" />
+        </list>
+      </option>
+    </inspection_tool>
+  </profile>
+</component>

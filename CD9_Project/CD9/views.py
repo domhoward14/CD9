@@ -27,7 +27,7 @@ CD9_APP_ID = "193476894336866"
 FB_TOKEN_EXTENDER_URL = "https://graph.facebook.com/oauth/access_token"
 
 def index(request):
-    return HttpResponse("This is where the Parent Dashboard will be located")
+    return render(request,'index.html')
 
 class UserProfileList(generics.CreateAPIView):
 
