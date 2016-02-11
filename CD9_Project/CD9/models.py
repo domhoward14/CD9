@@ -94,6 +94,8 @@ class UserProfile(models.Model):
     parent = models.ForeignKey(User, on_delete=models.CASCADE, null=True, related_name='parent')
     isTeenager = models.BooleanField(default=False)
     fb_token = models.CharField(null=True, default='default_text', max_length=512)
+    google_token = models.CharField(null=True, default='default_text', max_length=512)
+    id = models.IntegerField(unique=True, primary_key=True)
 
     def __unicode__(self):
         return self.user.username

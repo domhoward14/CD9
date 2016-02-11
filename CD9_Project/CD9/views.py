@@ -29,7 +29,23 @@ FB_TOKEN_EXTENDER_URL = "https://graph.facebook.com/oauth/access_token"
 def index(request):
     return render(request,'index.html')
 
-class UserProfileList(generics.CreateAPIView):
+class GetIds(generics.ListAPIView):
+
+    permission_classes = (IsAuthenticated,)
+    authentication_classes = (TokenAuthentication,)
+    queryset = UserProfile.objects.all()
+    serializer_class = UserProfileSerializer
+
+    def get_queryset(self):
+        user = self.request.user
+        profile = UserProfile.objects.get(email=user.email)
+        list = UserProfile.objects.filter(email=profile.email)
+        print profile.parent.email
+        list2 = UserProfile.objects.filter(email=profile.parent.email)
+        qs = list | list2
+        return qs
+
+class UserProfiles(generics.CreateAPIView):
 
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user)
@@ -44,15 +60,18 @@ class UpdateUserProfile(generics.UpdateAPIView):
     authentication_classes = (TokenAuthentication,)
     queryset = UserProfile.objects.all()
     serializer_class = UserProfileSerializer
-
+"""
+Will need to add functionality to make a user profile for
+the parent as well
+"""
 class AddParent(generics.CreateAPIView):
 
     def perform_create(self, serializer):
         parent = serializer.save()
+        profile = UserProfile.objects.create(user=parent, email=parent.email, id=generateId())
         teenager = UserProfile.objects.get(email=self.request.user.email)
         teenager.parent = parent
         teenager.save()
-
     permission_classes = (IsAuthenticated,)
     authentication_classes = (TokenAuthentication,)
     queryset = User.objects.all()
@@ -196,8 +215,9 @@ def CreateNewUser(request):
             ext_token = internalExtendToken(token)
             try:
                 password = generatePassword()
+                id = generateId()
                 user = User.objects.create(username=name,password=password, email=email)
-                UserProfile.objects.create(user=user, email=email, isTeenager=True, fb_token=ext_token.get("token", token))
+                UserProfile.objects.create(user=user, email=email, isTeenager=True, id=id, fb_token=ext_token.get("token", token))
             except Exception as e:
                 error = e.message
                 raise Http404("The profile was not successfully created. Error : " + error)
@@ -233,6 +253,8 @@ def generatePassword():
     charset = digits + ascii_uppercase + ascii_lowercase
     return ''.join(random.choice(charset) for _ in range(50))
 
+def generateId():
+    return ''.join(random.choice(digits) for _ in range(15))
 
 """
 Responsible for creating the django authentication token for
@@ -294,7 +316,6 @@ This is the helper function for TokenUpdater
 """
 def updateToken(user):
 
-    token = Token.objects.get(user=user)
     token = Token.objects.get(user=user)
     token.delete()
     token = createToken(user=user)

@@ -20,7 +20,7 @@ class TextSerializer(serializers.ModelSerializer):
 class UserProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserProfile
-        fields = ('user', 'email', 'fb_token')
+        fields = ('user', 'email', 'fb_token', 'google_token', 'id')
 
 class AppSerializer(serializers.ModelSerializer):
     class Meta:
