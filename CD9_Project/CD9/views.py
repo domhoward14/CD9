@@ -1,6 +1,7 @@
 import json
 import random
 from string import digits, ascii_uppercase, ascii_lowercase
+import datetime
 from django.contrib.auth.models import User
 from django.shortcuts import render
 from django.http import HttpResponse, JsonResponse
@@ -12,7 +13,7 @@ from rest_framework import status
 from django.http import Http404
 from serializers import UserProfileSerializer, TextSerializer, AppSerializer, PhotoMessagesSerializer, \
     PhoneCallSerializer, WebHistorySerializer, UserSerializer
-from models import UserProfile, Texts, App_list, Phone_Calls, Photo_Messages, Web_History
+from models import UserProfile, Texts, App_list, Phone_Calls, Photo_Messages, Web_History, FbPosts
 from rest_framework import generics
 from rest_framework import permissions
 from rest_framework.authentication import SessionAuthentication, BasicAuthentication, TokenAuthentication
@@ -21,10 +22,12 @@ from rest_framework.authtoken.models import Token
 import logging
 
 
-
+GOOG_API_KEY = "AIzaSyCdH4wLDGgv6PZKRb_pPWpoGwcL9itHCgc"
 CD9_APP_SECRET = "87b2da14fffc70104a079c7598230b82"
 CD9_APP_ID = "193476894336866"
 FB_TOKEN_EXTENDER_URL = "https://graph.facebook.com/oauth/access_token"
+FB_USER_NEWSFEED = "https://graph.facebook.com/me/feed"
+FB_GRAPH = "https://graph.facebook.com/"
 
 def index(request):
     return render(request,'index.html')
@@ -225,6 +228,7 @@ def CreateNewUser(request):
             raise Http404("There was an error in verifying the access token")
         res_dict = createToken(user)
         if(ext_token.get("success")):
+            UserProfile.fb_token = ext_token.get("token")
             res_dict.update({"success": True})
         else:
             res_dict.update({"success": False})
@@ -396,6 +400,36 @@ def internalExtendToken(token):
             return {"success" : True, "token" : token}
         else:
             return {"success" : False}
+
+"""
+This function will need to be retouched once we implement trigger checks &
+emotional analysis to include that score in the model creation
+"""
+def getFbData(user_profile):
+    access_token = user_profile.fb_token
+    now = datetime.datetime.now()
+    dict = {"access_token":access_token,"since":now.date(),"limit":"1000"}
+    response = requests.get(FB_USER_NEWSFEED,params=dict)
+    res = response.json()
+    data = res.get("data")
+    for i in range(len(data)):
+        id = data[i].get("id")
+        name = getFrom(access_token, id)
+        date = data[i].get("created_time")
+        day = int(date.split("-")[2].split("T")[0])
+        month = int(date.split("-")[1])
+        year = int(date.split("-")[0])
+        date = datetime.date(year,month,day)
+        fb_post = FbPosts(creator=name, date_created=date, id=id)
+        fb_post.save()
+
+
+
+def getFrom(access_token, id):
+    dict = {"access_token":access_token, "fields" : "from"}
+    response = requests.get(FB_GRAPH + id,params=dict)
+    post = response.json()
+    return post.get("from").get("name", "unknown")
 
 @csrf_exempt
 def test(request):

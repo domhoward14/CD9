@@ -40,7 +40,7 @@ class Data_Options(models.Model):
 
 class App_list(models.Model):
     appName = models.CharField(max_length=50)
-    installDate = models.DateTimeField()
+    installDate = models.DateField()
     owner = models.ForeignKey('auth.User', related_name='App_list')
 
 
@@ -49,24 +49,24 @@ class App_list(models.Model):
 class Phone_Calls(models.Model):
     number = models.IntegerField()
     convoTime = models.IntegerField()
-    date = models.DateTimeField()
+    date = models.DateField()
     owner = models.ForeignKey('auth.User', related_name='Phone_Calls')
 
 class Texts(models.Model):
     number = models.IntegerField()
-    date = models.DateTimeField()
+    date = models.DateField()
     content = models.CharField(max_length=160, default='default_text')
     owner = models.ForeignKey('auth.User', related_name='Texts')
 
 class Photo_Messages(models.Model):
     number = models.IntegerField()
-    date = models.DateTimeField()
+    date = models.DateField()
     owner = models.ForeignKey('auth.User', related_name='Photo_Messages')
 
 class Web_History(models.Model):
     site = models.CharField(max_length=100)
     rating = models.IntegerField(null=True)
-    date = models.DateTimeField()
+    date = models.DateField()
     owner = models.ForeignKey('auth.User', related_name='Web_History')
 
 class Social_Media(models.Model):
@@ -77,7 +77,7 @@ class Social_Media(models.Model):
         ('tag','Tagged'),
         ('friends','Friend Requests'),
     )
-    date = models.DateTimeField()
+    date = models.DateField()
     owner = models.ForeignKey('auth.User', related_name='Social_Media')
 
 class Total(models.Model):
@@ -100,3 +100,10 @@ class UserProfile(models.Model):
     def __unicode__(self):
         return self.user.username
 
+class FbPosts(models.Model):
+    creator = models.CharField(default="unknown", max_length=50, )
+    date_created = models.DateField(null=True)
+    emo_score = models.IntegerField(default=0)
+    trigger_hit = models.BooleanField(default=False)
+    message = models.CharField(max_length=300, null=True)
+    id = models.IntegerField(unique=True, primary_key=True)
