@@ -19,10 +19,12 @@ from rest_framework import permissions
 from rest_framework.authentication import SessionAuthentication, BasicAuthentication, TokenAuthentication
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.authtoken.models import Token
+from gcm import *
 import logging
 
-
-GOOG_API_KEY = "AIzaSyCdH4wLDGgv6PZKRb_pPWpoGwcL9itHCgc"
+DATUM_KEY = "dc648e604c7cc671609af14835c73152"
+TEXT_ANALYZER_URL = "http://api.datumbox.com/1.0/TwitterSentimentAnalysis.json"
+GCM_KEY = "AIzaSyCdH4wLDGgv6PZKRb_pPWpoGwcL9itHCgc"
 CD9_APP_SECRET = "87b2da14fffc70104a079c7598230b82"
 CD9_APP_ID = "193476894336866"
 FB_TOKEN_EXTENDER_URL = "https://graph.facebook.com/oauth/access_token"
@@ -111,7 +113,15 @@ class Texts(generics.CreateAPIView):
     permission_classes = (IsAuthenticated,)
     authentication_classes = (TokenAuthentication,)
     def perform_create(self, serializer):
-        serializer.save(owner=self.request.user)
+        text = serializer.validated_data['content']
+        dict = analyzeText(str(text))
+        score = 0
+        if(dict.get("success") == True):
+            if(dict.get("emo_score") == "negative"):
+                score = -1
+            elif(dict.get("emo_score") == "positive"):
+                score = 1
+        serializer.save(owner=self.request.user, emo_score=score)
 
     queryset = Texts.objects.all()
     serializer_class = TextSerializer
@@ -404,14 +414,20 @@ def internalExtendToken(token):
 """
 This function will need to be retouched once we implement trigger checks &
 emotional analysis to include that score in the model creation
+
+reset the data back to now when done testing
+
+In future enable logging in case of UNIQUE constraint errors
 """
 def getFbData(user_profile):
     access_token = user_profile.fb_token
     now = datetime.datetime.now()
-    dict = {"access_token":access_token,"since":now.date(),"limit":"1000"}
+    dict = {"access_token":access_token,"since":now,"limit":"1000"}
     response = requests.get(FB_USER_NEWSFEED,params=dict)
     res = response.json()
     data = res.get("data")
+    profile = UserProfile.objects.all()[0]
+    user_name = str(profile.user)
     for i in range(len(data)):
         id = data[i].get("id")
         name = getFrom(access_token, id)
@@ -420,16 +436,69 @@ def getFbData(user_profile):
         month = int(date.split("-")[1])
         year = int(date.split("-")[0])
         date = datetime.date(year,month,day)
-        fb_post = FbPosts(creator=name, date_created=date, id=id)
-        fb_post.save()
+        message = data[i].get("message")
+        dict = analyzeText(str(message))
+        score = 0
+        if(dict.get("success") == True):
+            if(dict.get("emo_score") == "negative"):
+                score = -1
+            elif(dict.get("emo_score") == "positive"):
+                score = 1
+        try:
+            FbPosts.objects.update_or_create(creator=name, date_created=date, emo_score=int(score), id=str(id))
+        except Exception as e:
+            print e.message
+"""
+def testgetFbData(user_profile):
+    access_token = user_profile.fb_token
+    now = datetime.datetime.now()
+    dict = {"access_token":access_token,"since":"2015-1-1","limit":"1000"}
+    response = requests.get(FB_USER_NEWSFEED,params=dict)
+    res = response.json()
+    data = res.get("data")
+    profile = UserProfile.objects.all()[0]
+    user_name = str(profile.user)
+    for i in range(len(data)):
+        id = data[i].get("id")
+        name = getFrom(access_token, id)
+        date = data[i].get("created_time")
+        day = int(date.split("-")[2].split("T")[0])
+        month = int(date.split("-")[1])
+        year = int(date.split("-")[0])
+        date = datetime.date(year,month,day)
+        message = data[i].get("message")
+        dict = analyzeText(str(message))
+        if(dict.get("emo_score") == "negative"):
+            score = -1
+            print "this is working"
+        elif(dict.get("emo_score") == "positive"):
+            score = 1
+            print "this is working"
+        else:
+            score = 0
+"""
 
-
+#android code is setup to access key name message
+def sendGcmMsg(user_profile, message, alert_type=None):
+    gcm = GCM("AIzaSyDnYlTUqmET3vg4zUbuLHhOX6HW-6cQ2EE")
+    data = {'message': message, 'alert_type': alert_type}
+    reg_id = user_profile.google_token
+    gcm.plaintext_request(registration_id=reg_id, data=data)
 
 def getFrom(access_token, id):
     dict = {"access_token":access_token, "fields" : "from"}
     response = requests.get(FB_GRAPH + id,params=dict)
     post = response.json()
     return post.get("from").get("name", "unknown")
+
+def analyzeText(text):
+    dict={"api_key":DATUM_KEY, "text":text}
+    res = requests.post(TEXT_ANALYZER_URL,dict)
+    if(res.status_code == 200):
+        return {"success":True, "emo_score" : res.json().get("output").get("result")}
+    else:
+        return {"success":False}
+
 
 @csrf_exempt
 def test(request):

@@ -57,6 +57,7 @@ class Texts(models.Model):
     date = models.DateField()
     content = models.CharField(max_length=160, default='default_text')
     owner = models.ForeignKey('auth.User', related_name='Texts')
+    emo_score = models.IntegerField(default=0)
 
 class Photo_Messages(models.Model):
     number = models.IntegerField()
@@ -106,4 +107,4 @@ class FbPosts(models.Model):
     emo_score = models.IntegerField(default=0)
     trigger_hit = models.BooleanField(default=False)
     message = models.CharField(max_length=300, null=True)
-    id = models.IntegerField(unique=True, primary_key=True)
+    id = models.CharField(unique=True, primary_key=True, max_length=200)
