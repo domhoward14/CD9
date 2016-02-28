@@ -1,6 +1,10 @@
 from django.db import models
 from django.contrib.auth.models import User
 
+"""
+update all of the models so that they are using the datetime field
+instead of the date field
+"""
 
 #Making a prototye design of the database
 #depending on what information is available via android
@@ -38,14 +42,19 @@ class Data_Options(models.Model):
 #        ('High', 'Conservative'),
 #    )
 
+#may want to add screenshots when doing the web GUI
 class App_list(models.Model):
-    appName = models.CharField(max_length=50)
-    installDate = models.DateField()
+    packageName = models.CharField(max_length=100)
+    appName = models.CharField(max_length=200, null=True)
+    contentRating = models.CharField(max_length=50, null=True)
+    siteLink = models.CharField(max_length=200, null=True)
+    marketUrl = models.CharField(max_length=200, null=True)
+    description = models.CharField(max_length=1000, null=True)
+    installDate = models.DateTimeField()
     owner = models.ForeignKey('auth.User', related_name='App_list')
-
+    #screenShot = models.CharField(max_length=200, null=True)
 
 #Also see how feasible it is to include contact names for texts, calls, etc ...
-
 class Phone_Calls(models.Model):
     number = models.IntegerField()
     convoTime = models.IntegerField()
@@ -66,8 +75,8 @@ class Photo_Messages(models.Model):
 
 class Web_History(models.Model):
     site = models.CharField(max_length=100)
-    rating = models.IntegerField(null=True)
-    date = models.DateField()
+    category = models.CharField(max_length=50)
+    installDate = models.DateTimeField()
     owner = models.ForeignKey('auth.User', related_name='Web_History')
 
 class Social_Media(models.Model):

@@ -23,7 +23,10 @@ from gcm import *
 import logging
 
 DATUM_KEY = "dc648e604c7cc671609af14835c73152"
+_42MATTERS_URL = "https://42matters.com/api/1/apps/query.json?access_token=d41ef412c9f15d2e2402d689b0668e6bc8a356f5"
 TEXT_ANALYZER_URL = "http://api.datumbox.com/1.0/TwitterSentimentAnalysis.json"
+TEXT_EXTRACTION_URL = "http://api.datumbox.com/1.0/TextExtraction.json"
+CATEGORY_URL = "http://api.datumbox.com/1.0/TopicClassification.json"
 GCM_KEY = "AIzaSyCdH4wLDGgv6PZKRb_pPWpoGwcL9itHCgc"
 CD9_APP_SECRET = "87b2da14fffc70104a079c7598230b82"
 CD9_APP_ID = "193476894336866"
@@ -131,7 +134,15 @@ class Apps(generics.CreateAPIView):
     permission_classes = (IsAuthenticated,)
     authentication_classes = (TokenAuthentication,)
     def perform_create(self, serializer):
-        serializer.save(owner=self.request.user)
+        packageName = serializer.validated_data['packageName']
+        appDict = testRequest(packageName)
+        content_rating = appDict.get("content_rating", "nothing")
+        appName  = appDict.get("title", "nothing")
+        siteLink  = appDict.get("website", "nothing")
+        description = appDict.get("description", "nothing")
+        marketUrl = appDict.get("market_url", "nothing")
+        #screenShot = appDict.get("screenshots", "nothing")[0]
+        serializer.save(owner=self.request.user, marketUrl = marketUrl,description = description, appName=appName, siteLink=siteLink)
 
     #When the authentication step is ready
     #permission_classes = (permissions.IsAuthenticated,)
@@ -167,7 +178,16 @@ class WebHistory(generics.CreateAPIView):
     permission_classes = (IsAuthenticated,)
     authentication_classes = (TokenAuthentication,)
     def perform_create(self, serializer):
-        serializer.save(owner=self.request.user)
+        site = serializer.validated_data['site']
+        site = "http://"+site
+        res = requests.get(site)
+        dict = {"api_key":DATUM_KEY, "text":res.text}
+        res = requests.post(TEXT_EXTRACTION_URL, dict)
+        extractedText = res.json().get("output").get("result", "")
+        dict["text"] = extractedText
+        res = requests.post(CATEGORY_URL, dict)
+        category = res.json().get("output").get("result", "nothing")
+        serializer.save(owner=self.request.user, category=category)
 
     #When the authentication step is ready
     #permission_classes = (permissions.IsAuthenticated,)
@@ -503,3 +523,33 @@ def analyzeText(text):
 @csrf_exempt
 def test(request):
     return HttpResponse(request.user)
+
+def testRequest(packageName):
+    dict = {
+              "query": {
+                "_id": "56d1f962ea9e198b7963d678",
+                "name": "snapchat",
+                "platform": "android",
+                "query_params": {
+                  "sort": "number_ratings",
+                  "from": 0,
+                  "num": 100,
+                  "i18n_lang": [],
+                  "cat_int": [],
+                  "content_rating": [],
+                  "sort_order": "desc",
+                  "downloads_lte": "",
+                  "downloads_gte": "",
+                  "full_text_term": "",
+                  "title_exact_match": "true",
+                  "include_full_text_desc": "true",
+                  "package_name": [
+                    packageName
+                  ]
+                },
+                "user_id": "56d1f29ceb9e193d08855550"
+              }
+            }
+    dict = json.dumps(dict)
+    res = requests.post(_42MATTERS_URL, dict)
+    return res.json().get("results")[0]

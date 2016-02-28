@@ -11,10 +11,9 @@ class UserSerializer(serializers.ModelSerializer):
         extra_kwargs = {'password': {'write_only': True}}
 
 class TextSerializer(serializers.ModelSerializer):
-    owner = serializers.ReadOnlyField(source='owner.username')
     class Meta:
         model = Texts
-        fields = ('number', 'date', 'content', 'owner', 'pk')
+        fields = ('number', 'date', 'content', 'pk')
 
 
 class UserProfileSerializer(serializers.ModelSerializer):
@@ -25,7 +24,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
 class AppSerializer(serializers.ModelSerializer):
     class Meta:
         model = App_list
-        fields = ('appName', 'installDate')
+        fields = ('appName', 'installDate', 'packageName', 'contentRating', 'siteLink', 'marketUrl', "description")
 
 class PhoneCallSerializer(serializers.ModelSerializer):
     class Meta:
@@ -40,7 +39,7 @@ class PhotoMessagesSerializer(serializers.ModelSerializer):
 class WebHistorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Web_History
-        fields = ('site', 'rating', 'date')
+        fields = ('site','installDate')
 
 
 
