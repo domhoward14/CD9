@@ -52,6 +52,7 @@ class App_list(models.Model):
     description = models.CharField(max_length=1000, null=True)
     installDate = models.DateTimeField()
     owner = models.ForeignKey('auth.User', related_name='App_list')
+    isProcessed = models.BooleanField(default=False)
     #screenShot = models.CharField(max_length=200, null=True)
 
 #Also see how feasible it is to include contact names for texts, calls, etc ...
@@ -67,6 +68,7 @@ class Texts(models.Model):
     content = models.CharField(max_length=160, default='default_text')
     owner = models.ForeignKey('auth.User', related_name='Texts')
     emo_score = models.IntegerField(default=0)
+    isProcessed = models.BooleanField(default=False)
 
 class Photo_Messages(models.Model):
     number = models.IntegerField()
@@ -78,6 +80,7 @@ class Web_History(models.Model):
     category = models.CharField(max_length=50)
     installDate = models.DateTimeField()
     owner = models.ForeignKey('auth.User', related_name='Web_History')
+    isProcessed = models.BooleanField(default=False)
 
 class Social_Media(models.Model):
     socialActivity =(
@@ -117,3 +120,4 @@ class FbPosts(models.Model):
     trigger_hit = models.BooleanField(default=False)
     message = models.CharField(max_length=300, null=True)
     id = models.CharField(unique=True, primary_key=True, max_length=200)
+    isProcessed = models.BooleanField(default=False)

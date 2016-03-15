@@ -7,6 +7,7 @@ from django.shortcuts import render
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 import requests
+from rest_framework.serializers import ModelSerializer
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -20,6 +21,7 @@ from rest_framework.authentication import SessionAuthentication, BasicAuthentica
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.authtoken.models import Token
 from gcm import *
+from rest_framework_bulk import ListBulkCreateUpdateDestroyAPIView
 import logging
 
 DATUM_KEY = "dc648e604c7cc671609af14835c73152"
@@ -33,9 +35,88 @@ CD9_APP_ID = "193476894336866"
 FB_TOKEN_EXTENDER_URL = "https://graph.facebook.com/oauth/access_token"
 FB_USER_NEWSFEED = "https://graph.facebook.com/me/feed"
 FB_GRAPH = "https://graph.facebook.com/"
+C_TEXTS = 0
+C_APPS = 1
+C_WEBSITES = 2
+
 
 def index(request):
     return render(request,'index.html')
+
+def getAppInfo(packageName):
+    dict = {
+              "query": {
+                "_id": "56d1f962ea9e198b7963d678",
+                "name": "snapchat",
+                "platform": "android",
+                "query_params": {
+                  "sort": "number_ratings",
+                  "from": 0,
+                  "num": 100,
+                  "i18n_lang": [],
+                  "cat_int": [],
+                  "content_rating": [],
+                  "sort_order": "desc",
+                  "downloads_lte": "",
+                  "downloads_gte": "",
+                  "full_text_term": "",
+                  "title_exact_match": "true",
+                  "include_full_text_desc": "true",
+                  "package_name": [
+                    packageName
+                  ]
+                },
+                "user_id": "56d1f29ceb9e193d08855550"
+              }
+            }
+    dict = json.dumps(dict)
+    res = requests.post(_42MATTERS_URL, dict)
+    return res.json().get("results")[0]
+
+def fetchAndProcess(dict):
+    data_set = dict.get("data_set", "nothing")
+    data_type = dict.get("data_type")
+    if(data_type == C_TEXTS):
+        #ANALYZE TEXTS AND MARK PROCESSED TRUE
+        for text in data_set:
+            content = text.content
+            dict = analyzeText(str(content))
+            text.emo_score = 0
+            if(dict.get("success") == True):
+                print "it got to the api successfully"
+                if(dict.get("emo_score") == "negative"):
+                    text.emo_score = -1
+                elif(dict.get("emo_score") == "positive"):
+                    text.emo_score = 1
+                text.isProcessed = True
+            text.save()
+    elif(data_type == C_APPS):
+        for app in data_set:
+            packageName = app.packageName
+            appDict = getAppInfo(packageName)
+            app.content_rating = appDict.get("content_rating", "nothing")
+            app.appName  = appDict.get("title", "nothing")
+            app.siteLink  = appDict.get("website", "nothing")
+            app.description = appDict.get("description", "nothing")
+            app.marketUrl = appDict.get("market_url", "nothing")
+            #screenShot = appDict.get("screenshots", "nothing")[0]
+            app.isProcessed = True
+            app.save()
+    elif(data_type == C_WEBSITES):
+        #ANALYZE_WEBSITES AND MARK PROCESSED TRUE
+        for website in data_set:
+            site = website.site
+            site = "http://"+site
+            res = requests.get(site)
+            dict = {"api_key":DATUM_KEY, "text":res.text}
+            res = requests.post(TEXT_EXTRACTION_URL, dict)
+            extractedText = res.json().get("output").get("result", "")
+            dict["text"] = extractedText
+            res = requests.post(CATEGORY_URL, dict)
+            website.category = res.json().get("output").get("result", "nothing")
+            website.isProcessed = True
+            website.save()
+
 
 class GetIds(generics.ListAPIView):
 
@@ -53,216 +134,7 @@ class GetIds(generics.ListAPIView):
         qs = list | list2
         return qs
 
-class UserProfiles(generics.CreateAPIView):
 
-    def perform_create(self, serializer):
-        serializer.save(owner=self.request.user)
-    permission_classes = (IsAuthenticated,)
-    authentication_classes = (TokenAuthentication,)
-    queryset = UserProfile.objects.all()
-    serializer_class = UserProfileSerializer
-
-class UpdateUserProfile(generics.UpdateAPIView):
-
-    permission_classes = (IsAuthenticated,)
-    authentication_classes = (TokenAuthentication,)
-    queryset = UserProfile.objects.all()
-    serializer_class = UserProfileSerializer
-"""
-Will need to add functionality to make a user profile for
-the parent as well
-"""
-class AddParent(generics.CreateAPIView):
-
-    def perform_create(self, serializer):
-        parent = serializer.save()
-        profile = UserProfile.objects.create(user=parent, email=parent.email, id=generateId())
-        teenager = UserProfile.objects.get(email=self.request.user.email)
-        teenager.parent = parent
-        teenager.save()
-    permission_classes = (IsAuthenticated,)
-    authentication_classes = (TokenAuthentication,)
-    queryset = User.objects.all()
-    serializer_class = UserSerializer
-
-
-"""
-class Texts(APIView):
-
-    def post(self, request, format=None):
-        serializer = TextSerializer(data=request.data)
-"""
-
-class TextsUpdate(generics.UpdateAPIView):
-
-    """
-    def update(self, request, *args, **kwargs):
-        data = request.data
-        text_instance = Texts.objects.get(pk=1)
-        serializer = TextSerializer(text_instance, data=data, many=True)
-
-        if serializer.is_valid():
-            serializer.save()
-
-        return Response(serializer.data)
-    """
-    permission_classes = (IsAuthenticated,)
-    authentication_classes = (TokenAuthentication,)
-    queryset = Texts.objects.all()
-    serializer_class = TextSerializer
-
-class Texts(generics.CreateAPIView):
-
-    permission_classes = (IsAuthenticated,)
-    authentication_classes = (TokenAuthentication,)
-    def perform_create(self, serializer):
-        text = serializer.validated_data['content']
-        dict = analyzeText(str(text))
-        score = 0
-        if(dict.get("success") == True):
-            if(dict.get("emo_score") == "negative"):
-                score = -1
-            elif(dict.get("emo_score") == "positive"):
-                score = 1
-        serializer.save(owner=self.request.user, emo_score=score)
-
-    queryset = Texts.objects.all()
-    serializer_class = TextSerializer
-
-class Apps(generics.CreateAPIView):
-
-    permission_classes = (IsAuthenticated,)
-    authentication_classes = (TokenAuthentication,)
-    def perform_create(self, serializer):
-        packageName = serializer.validated_data['packageName']
-        appDict = testRequest(packageName)
-        content_rating = appDict.get("content_rating", "nothing")
-        appName  = appDict.get("title", "nothing")
-        siteLink  = appDict.get("website", "nothing")
-        description = appDict.get("description", "nothing")
-        marketUrl = appDict.get("market_url", "nothing")
-        #screenShot = appDict.get("screenshots", "nothing")[0]
-        serializer.save(owner=self.request.user, marketUrl = marketUrl,description = description, appName=appName, siteLink=siteLink)
-
-    #When the authentication step is ready
-    #permission_classes = (permissions.IsAuthenticated,)
-    queryset = App_list.objects.all()
-    serializer_class = AppSerializer
-
-class PhoneCall(generics.CreateAPIView):
-
-    permission_classes = (IsAuthenticated,)
-    authentication_classes = (TokenAuthentication,)
-    def perform_create(self, serializer):
-        serializer.save(owner=self.request.user)
-
-    #When the authentication step is ready
-    #permission_classes = (permissions.IsAuthenticated,)
-    queryset = Phone_Calls.objects.all()
-    serializer_class = PhoneCallSerializer
-
-class PhotoMessages(generics.CreateAPIView):
-
-    permission_classes = (IsAuthenticated,)
-    authentication_classes = (TokenAuthentication,)
-    def perform_create(self, serializer):
-        serializer.save(owner=self.request.user)
-
-    #When the authentication step is ready
-    #permission_classes = (permissions.IsAuthenticated,)
-    queryset = Photo_Messages.objects.all()
-    serializer_class = PhotoMessagesSerializer
-
-class WebHistory(generics.CreateAPIView):
-
-    permission_classes = (IsAuthenticated,)
-    authentication_classes = (TokenAuthentication,)
-    def perform_create(self, serializer):
-        site = serializer.validated_data['site']
-        site = "http://"+site
-        res = requests.get(site)
-        dict = {"api_key":DATUM_KEY, "text":res.text}
-        res = requests.post(TEXT_EXTRACTION_URL, dict)
-        extractedText = res.json().get("output").get("result", "")
-        dict["text"] = extractedText
-        res = requests.post(CATEGORY_URL, dict)
-        category = res.json().get("output").get("result", "nothing")
-        serializer.save(owner=self.request.user, category=category)
-
-    #When the authentication step is ready
-    #permission_classes = (permissions.IsAuthenticated,)
-    queryset = Web_History.objects.all()
-    serializer_class = WebHistorySerializer
-"""
-This needs to be turned into the token updater
-@csrf_exempt
-def tokenAuthenticator(request):
-    json_data = request.body
-    parsed_data = json.loads(json_data)
-    token = parsed_data.get("token", "There was no token !")
-    password = parsed_data.get("password", "")
-    dict = {'fields' : 'name, email', 'access_token' : token}
-    r = requests.get('https://graph.facebook.com/me', params=dict)
-    parsed_data = json.loads(r.text)
-    email = parsed_data.get("email","There was an error getting the email from the dictionary")
-    name = parsed_data.get("name","error error")
-    first_name = name.split()[0]
-    last_name = name.split()[1]
-    #profile = UserProfile.objects.get_or_create(email=email)
-    try:
-        profile = User.objects.get(email=email)
-    except:
-        try:
-            profile = User.objects.create(first_name=first_name,last_name=last_name,email=email,password=password)
-            UserProfile.objects.create()
-        except:
-            return("Profile was not successfully created !")
-    if (r.status_code == 200):
-
-        return HttpResponse(str(parsed_data))
-    else:
-        return HttpResponse("There was an error with the facebook graph request.")
-"""
-
-"""
-This is the initial endpoint that all new user go through for account creation.
-Sends back the token for django authentication, and a flag letting the client
-know if the token was successfully extended or not.
-"""
-@csrf_exempt
-def CreateNewUser(request):
-    token_dict = getToken(request)
-    """
-    **Current flow design does not require a password input from the client**
-    password = token_dict.get("password","Nothing")
-    """
-    token = token_dict.get("token", "Nothing")
-    if(token == "Nothing"):
-        raise Http404("There was no token sent in the JSON Object.")
-    else:
-        verify_results = tokenVerifier(token)
-        if(verify_results["isVerified"]):
-            dict = verify_results["facebook_dict"]
-            email = dict.get("email","")
-            name = dict.get("name","")
-            ext_token = internalExtendToken(token)
-            try:
-                password = generatePassword()
-                id = generateId()
-                user = User.objects.create(username=name,password=password, email=email)
-                UserProfile.objects.create(user=user, email=email, isTeenager=True, id=id, fb_token=ext_token.get("token", token))
-            except Exception as e:
-                error = e.message
-                raise Http404("The profile was not successfully created. Error : " + error)
-        else:
-            raise Http404("There was an error in verifying the access token")
-        res_dict = createToken(user)
-        if(ext_token.get("success")):
-            UserProfile.fb_token = ext_token.get("token")
-            res_dict.update({"success": True})
-        else:
-            res_dict.update({"success": False})
-        return JsonResponse(res_dict)
 
 """
 Add a parent to a teenager profile
@@ -524,32 +396,223 @@ def analyzeText(text):
 def test(request):
     return HttpResponse(request.user)
 
-def testRequest(packageName):
-    dict = {
-              "query": {
-                "_id": "56d1f962ea9e198b7963d678",
-                "name": "snapchat",
-                "platform": "android",
-                "query_params": {
-                  "sort": "number_ratings",
-                  "from": 0,
-                  "num": 100,
-                  "i18n_lang": [],
-                  "cat_int": [],
-                  "content_rating": [],
-                  "sort_order": "desc",
-                  "downloads_lte": "",
-                  "downloads_gte": "",
-                  "full_text_term": "",
-                  "title_exact_match": "true",
-                  "include_full_text_desc": "true",
-                  "package_name": [
-                    packageName
-                  ]
-                },
-                "user_id": "56d1f29ceb9e193d08855550"
-              }
-            }
-    dict = json.dumps(dict)
-    res = requests.post(_42MATTERS_URL, dict)
-    return res.json().get("results")[0]
+class UserProfiles(generics.CreateAPIView):
+
+    def perform_create(self, serializer):
+        serializer.save(owner=self.request.user)
+    permission_classes = (IsAuthenticated,)
+    authentication_classes = (TokenAuthentication,)
+    queryset = UserProfile.objects.all()
+    serializer_class = UserProfileSerializer
+
+class UpdateUserProfile(generics.UpdateAPIView):
+
+    permission_classes = (IsAuthenticated,)
+    authentication_classes = (TokenAuthentication,)
+    queryset = UserProfile.objects.all()
+    serializer_class = UserProfileSerializer
+"""
+Will need to add functionality to make a user profile for
+the parent as well
+"""
+class AddParent(generics.CreateAPIView):
+
+    def perform_create(self, serializer):
+        parent = serializer.save()
+        profile = UserProfile.objects.create(user=parent, email=parent.email, id=generateId())
+        teenager = UserProfile.objects.get(email=self.request.user.email)
+        teenager.parent = parent
+        teenager.save()
+    permission_classes = (IsAuthenticated,)
+    authentication_classes = (TokenAuthentication,)
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+
+
+"""
+class Texts(APIView):
+
+    def post(self, request, format=None):
+        serializer = TextSerializer(data=request.data)
+"""
+
+class TextsUpdate(generics.UpdateAPIView):
+
+    """
+    def update(self, request, *args, **kwargs):
+        data = request.data
+        text_instance = Texts.objects.get(pk=1)
+        serializer = TextSerializer(text_instance, data=data, many=True)
+
+        if serializer.is_valid():
+            serializer.save()
+
+        return Response(serializer.data)
+    """
+    permission_classes = (IsAuthenticated,)
+    authentication_classes = (TokenAuthentication,)
+    queryset = Texts.objects.all()
+    serializer_class = TextSerializer
+
+class Texts_View(generics.CreateAPIView):
+
+    permission_classes = (IsAuthenticated,)
+    authentication_classes = (TokenAuthentication,)
+    def perform_create(self, serializer):
+        serializer.save(owner=self.request.user)
+        data_set = Texts.objects.filter(isProcessed=False)
+        dict = {'data_set' : data_set}
+        dict["data_type"] = C_TEXTS
+        fetchAndProcess(dict)
+
+    def get_serializer(self, *args, **kwargs):
+        if "data" in kwargs:
+            data = kwargs["data"]
+            if isinstance(data, list):
+                kwargs["many"] = True
+        return super(Texts_View, self).get_serializer(*args, **kwargs)
+
+    queryset = Texts.objects.all()
+    serializer_class = TextSerializer
+
+
+class Apps(generics.CreateAPIView):
+
+    permission_classes = (IsAuthenticated,)
+    authentication_classes = (TokenAuthentication,)
+    def perform_create(self, serializer):
+        serializer.save(owner=self.request.user)
+        data_set = App_list.objects.filter(isProcessed=False)
+        dict = {'data_set' : data_set}
+        dict["data_type"] = C_APPS
+        fetchAndProcess(dict)
+
+    def get_serializer(self, *args, **kwargs):
+        if "data" in kwargs:
+            data = kwargs["data"]
+            if isinstance(data, list):
+                kwargs["many"] = True
+        return super(Apps, self).get_serializer(*args, **kwargs)
+
+    queryset = App_list.objects.all()
+    serializer_class = AppSerializer
+
+
+class PhoneCall(generics.CreateAPIView):
+
+    permission_classes = (IsAuthenticated,)
+    authentication_classes = (TokenAuthentication,)
+    def perform_create(self, serializer):
+        serializer.save(owner=self.request.user)
+
+    #When the authentication step is ready
+    #permission_classes = (permissions.IsAuthenticated,)
+    queryset = Phone_Calls.objects.all()
+    serializer_class = PhoneCallSerializer
+
+class PhotoMessages(generics.CreateAPIView):
+
+    permission_classes = (IsAuthenticated,)
+    authentication_classes = (TokenAuthentication,)
+    def perform_create(self, serializer):
+        serializer.save(owner=self.request.user)
+
+    #When the authentication step is ready
+    #permission_classes = (permissions.IsAuthenticated,)
+    queryset = Photo_Messages.objects.all()
+    serializer_class = PhotoMessagesSerializer
+
+class WebHistory(generics.CreateAPIView):
+
+    permission_classes = (IsAuthenticated,)
+    authentication_classes = (TokenAuthentication,)
+
+
+    def perform_create(self, serializer):
+        serializer.save(owner=self.request.user)
+        data_set = Web_History.objects.filter(isProcessed=False)
+        dict = {'data_set' : data_set}
+        dict["data_type"] = C_WEBSITES
+        fetchAndProcess(dict)
+
+    def get_serializer(self, *args, **kwargs):
+        if "data" in kwargs:
+            data = kwargs["data"]
+            if isinstance(data, list):
+                kwargs["many"] = True
+        return super(WebHistory, self).get_serializer(*args, **kwargs)
+
+    queryset = Web_History.objects.all()
+    serializer_class = WebHistorySerializer
+
+
+"""
+This needs to be turned into the token updater
+@csrf_exempt
+def tokenAuthenticator(request):
+    json_data = request.body
+    parsed_data = json.loads(json_data)
+    token = parsed_data.get("token", "There was no token !")
+    password = parsed_data.get("password", "")
+    dict = {'fields' : 'name, email', 'access_token' : token}
+    r = requests.get('https://graph.facebook.com/me', params=dict)
+    parsed_data = json.loads(r.text)
+    email = parsed_data.get("email","There was an error getting the email from the dictionary")
+    name = parsed_data.get("name","error error")
+    first_name = name.split()[0]
+    last_name = name.split()[1]
+    #profile = UserProfile.objects.get_or_create(email=email)
+    try:
+        profile = User.objects.get(email=email)
+    except:
+        try:
+            profile = User.objects.create(first_name=first_name,last_name=last_name,email=email,password=password)
+            UserProfile.objects.create()
+        except:
+            return("Profile was not successfully created !")
+    if (r.status_code == 200):
+
+        return HttpResponse(str(parsed_data))
+    else:
+        return HttpResponse("There was an error with the facebook graph request.")
+"""
+
+"""
+This is the initial endpoint that all new user go through for account creation.
+Sends back the token for django authentication, and a flag letting the client
+know if the token was successfully extended or not.
+"""
+@csrf_exempt
+def CreateNewUser(request):
+    token_dict = getToken(request)
+    """
+    **Current flow design does not require a password input from the client**
+    password = token_dict.get("password","Nothing")
+    """
+    token = token_dict.get("token", "Nothing")
+    if(token == "Nothing"):
+        raise Http404("There was no token sent in the JSON Object.")
+    else:
+        verify_results = tokenVerifier(token)
+        if(verify_results["isVerified"]):
+            dict = verify_results["facebook_dict"]
+            email = dict.get("email","")
+            name = dict.get("name","")
+            ext_token = internalExtendToken(token)
+            try:
+                password = generatePassword()
+                id = generateId()
+                user = User.objects.create(username=name,password=password, email=email)
+                UserProfile.objects.create(user=user, email=email, isTeenager=True, id=id, fb_token=ext_token.get("token", token))
+            except Exception as e:
+                error = e.message
+                raise Http404("The profile was not successfully created. Error : " + error)
+        else:
+            raise Http404("There was an error in verifying the access token")
+        res_dict = createToken(user)
+        if(ext_token.get("success")):
+            UserProfile.fb_token = ext_token.get("token")
+            res_dict.update({"success": True})
+        else:
+            res_dict.update({"success": False})
+        return JsonResponse(res_dict)

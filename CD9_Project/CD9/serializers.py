@@ -1,7 +1,12 @@
 from rest_framework import serializers
+from rest_framework.serializers import ModelSerializer
 from models import Texts,UserProfile, App_list, Phone_Calls, Photo_Messages, Web_History
 from django.contrib.auth.models import User
-
+from rest_framework_bulk import (
+    BulkListSerializer,
+    BulkSerializerMixin,
+    ListBulkCreateUpdateDestroyAPIView,
+)
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -40,6 +45,9 @@ class WebHistorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Web_History
         fields = ('site','installDate')
+
+
+
 
 
 
