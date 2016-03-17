@@ -1,6 +1,12 @@
 from django.db import models
 from django.contrib.auth.models import User
 
+C_TEXTS = 0
+C_APPS = 1
+C_WEBSITES = 2
+C_NUMBER = 3
+C_FB = 4
+C_EMAIL = 5
 """
 update all of the models so that they are using the datetime field
 instead of the date field
@@ -20,8 +26,8 @@ instead of the date field
 #Class for parent to make custom alert triggers
 #Currently made for the parents to be alerted from custom inputted
 class Flags(models.Model):
-    triggerWord = models.CharField(max_length=50)
-    isDomain = models.BooleanField(default=False)
+    triggerWord = models.CharField(max_length=100)
+    dataType = models.IntegerField(default=6)
     owner = models.ForeignKey('auth.User', related_name='Flags')
 
 #Options for the parent to customize some of the monitoring features
@@ -53,18 +59,20 @@ class App_list(models.Model):
     installDate = models.DateTimeField()
     owner = models.ForeignKey('auth.User', related_name='App_list')
     isProcessed = models.BooleanField(default=False)
+    isAlert = models.BooleanField(default=False)
     #screenShot = models.CharField(max_length=200, null=True)
 
 #Also see how feasible it is to include contact names for texts, calls, etc ...
 class Phone_Calls(models.Model):
     number = models.IntegerField()
     convoTime = models.IntegerField()
-    date = models.DateField()
+    date = models.DateTimeField()
     owner = models.ForeignKey('auth.User', related_name='Phone_Calls')
+    isProcessed = models.BooleanField(default=False)
 
 class Texts(models.Model):
     number = models.IntegerField()
-    date = models.DateField()
+    date = models.DateTimeField()
     content = models.CharField(max_length=160, default='default_text')
     owner = models.ForeignKey('auth.User', related_name='Texts')
     emo_score = models.IntegerField(default=0)
@@ -72,7 +80,7 @@ class Texts(models.Model):
 
 class Photo_Messages(models.Model):
     number = models.IntegerField()
-    date = models.DateField()
+    date = models.DateTimeField()
     owner = models.ForeignKey('auth.User', related_name='Photo_Messages')
 
 class Web_History(models.Model):
@@ -108,16 +116,24 @@ class UserProfile(models.Model):
     isTeenager = models.BooleanField(default=False)
     fb_token = models.CharField(null=True, default='default_text', max_length=512)
     google_token = models.CharField(null=True, default='default_text', max_length=512)
+    gcm_reg_id = models.CharField(default='null', max_length=512)
     id = models.IntegerField(unique=True, primary_key=True)
 
     def __unicode__(self):
         return self.user.username
 
 class FbPosts(models.Model):
+    owner = models.ForeignKey('auth.User', related_name='FbPosts')
     creator = models.CharField(default="unknown", max_length=50, )
     date_created = models.DateField(null=True)
     emo_score = models.IntegerField(default=0)
     trigger_hit = models.BooleanField(default=False)
     message = models.CharField(max_length=300, null=True)
     id = models.CharField(unique=True, primary_key=True, max_length=200)
+
+class Alerts(models.Model):
+    type = models.IntegerField(default=10)
+    date_created = models.DateTimeField(null=True)
     isProcessed = models.BooleanField(default=False)
+    content = models.CharField(default="null", max_length=500, )
+    parent = models.ForeignKey(User, on_delete=models.CASCADE, related_name='owner')

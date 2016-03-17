@@ -18,13 +18,13 @@ class UserSerializer(serializers.ModelSerializer):
 class TextSerializer(serializers.ModelSerializer):
     class Meta:
         model = Texts
-        fields = ('number', 'date', 'content', 'pk')
+        fields = ('number', 'date', 'content', 'pk',)
 
 
 class UserProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserProfile
-        fields = ('user', 'email', 'fb_token', 'google_token', 'id')
+        fields = ('user', 'email', 'fb_token', 'google_token', 'id', 'gcm_reg_id' )
 
 class AppSerializer(serializers.ModelSerializer):
     class Meta:

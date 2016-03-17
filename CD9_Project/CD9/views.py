@@ -14,13 +14,14 @@ from rest_framework import status
 from django.http import Http404
 from serializers import UserProfileSerializer, TextSerializer, AppSerializer, PhotoMessagesSerializer, \
     PhoneCallSerializer, WebHistorySerializer, UserSerializer
-from models import UserProfile, Texts, App_list, Phone_Calls, Photo_Messages, Web_History, FbPosts
+from models import *
 from rest_framework import generics
 from rest_framework import permissions
 from rest_framework.authentication import SessionAuthentication, BasicAuthentication, TokenAuthentication
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.authtoken.models import Token
 from gcm import *
+import re
 from rest_framework_bulk import ListBulkCreateUpdateDestroyAPIView
 import logging
 
@@ -29,7 +30,8 @@ _42MATTERS_URL = "https://42matters.com/api/1/apps/query.json?access_token=d41ef
 TEXT_ANALYZER_URL = "http://api.datumbox.com/1.0/TwitterSentimentAnalysis.json"
 TEXT_EXTRACTION_URL = "http://api.datumbox.com/1.0/TextExtraction.json"
 CATEGORY_URL = "http://api.datumbox.com/1.0/TopicClassification.json"
-GCM_KEY = "AIzaSyCdH4wLDGgv6PZKRb_pPWpoGwcL9itHCgc"
+GCM_KEY = "AIzaSyDnYlTUqmET3vg4zUbuLHhOX6HW-6cQ2EE"
+#GCM_KEY = "AIzaSyCdH4wLDGgv6PZKRb_pPWpoGwcL9itHCgc"
 CD9_APP_SECRET = "87b2da14fffc70104a079c7598230b82"
 CD9_APP_ID = "193476894336866"
 FB_TOKEN_EXTENDER_URL = "https://graph.facebook.com/oauth/access_token"
@@ -38,16 +40,116 @@ FB_GRAPH = "https://graph.facebook.com/"
 C_TEXTS = 0
 C_APPS = 1
 C_WEBSITES = 2
-
+C_NUMBER = 3
+C_FB = 4
+C_EMAIL = 5
 
 def index(request):
     return render(request,'index.html')
+
+def createAlert(type, date_created, isProcessed, content, number, parent):
+    alert = Alerts(type=type, date_created=datetime, isProcessed=isProcessed, content=content, number=number, parent=parent)
+    alert.save()
+
+def sendGcmAlert(userProfile, alert_message):
+    gcm = GCM(GCM_KEY)
+    data = {'alert' : alert_message}
+    if(userProfile.gcm_reg_id != "null"):
+        reg_id = userProfile.gcm_reg_id
+        gcm.plaintext_request(registration_id=reg_id, data=data)
+    else:
+        print userProfile.email + "does not have a gcm registration id"
+
+def triggerCheck(dict):
+#Make the data besides the apps get the data list from the function call
+#so it is only checking the ones that are incoming in real time
+
+    teenProf = dict.get("profile")
+    print "Variable teeProf is " + str(teenProf)
+    parent = teenProf.parent
+    triggerType = dict.get("data_type", "nothing")
+    print "the type is " + str(triggerType)
+    data_set = dict.get("data_set")
+
+    if(triggerType == C_APPS):
+        apps = data_set
+        trigger_list = Flags.objects.filter(owner=parent, dataType=C_APPS)
+        for trigger in trigger_list:
+            for app in apps:
+                print "the app and the trigger word are " + app.appName+ " and " + trigger.triggerWord
+                if(trigger.triggerWord.lower() == app.appName.lower()):
+                    #sendGcmAlert(teenProf, "App Alert: Detected a app on the trigger list !")
+                    alert = createAlert(type=C_APPS, date_created=datetime.datetime.now(), content=app.appName, parent=parent)
+                    alert.save()
+                    print "App Alert: Detected a app on the trigger list !"
+
+    elif(triggerType == C_TEXTS):
+        #texts = dict.get("texts")
+        texts = data_set
+        trigger_list = Flags.objects.filter(owner=parent, dataType=C_TEXTS)
+        for trigger in trigger_list:
+            for text in texts:
+                triggerHit = re.search(trigger.triggerWord, text.content)
+                if(triggerHit):
+                    print "Text Alert: Detected a text with that contains a word from trigger list !"
+                    #sendGcmAlert(userPrC_TEXTSof, "Text Alert: Detected a text with that contains a word from trigger list !")
+                    alert = createAlert(type=C_TEXTS, date_created=datetime.datetime.now(), content=text.content, parent=parent)
+                    alert.save()
+
+        trigger_list = Flags.objects.filter(owner=parent, dataType=C_NUMBER)
+        for trigger in trigger_list:
+            for number in texts:
+                if( trigger.triggerWord.replace("-","") == str(text.number).replace("-", "")):
+                    print "Text Alert: Detected a text from a number on the trigger list !"
+                    #sendGcmAlert(userProf, "Text Alert: Detected a text from a number on the trigger list !")
+                    alert = createAlert(type=C_NUMBER, date_created=datetime.datetime.now(), content=text.number, parent=parent)
+                    alert.save()
+
+    elif(triggerType == C_WEBSITES):
+        websites = data_set
+        trigger_list = Flags.objects.filter(owner=parent, dataType=C_WEBSITES)
+        for trigger in trigger_list:
+            for domain in websites:
+                triggerHit = re.search(trigger.triggerWord, domain.site, re.IGNORECASE)
+                if(triggerHit):
+                    print "Website Alert: Detected a visited site thats listed in trigger list !"
+                    #sendGcmAlert(userProf, "Website Alert: Detected a visited site thats listed in trigger list !")
+                    alert = createAlert(type=C_WEBSITES, date_created=datetime.datetime.now(), content=domain.site, parent=parent)
+                    alert.save()
+
+    elif(triggerType == C_NUMBER):
+        numbers = data_set
+        trigger_list = Flags.objects.filter(owner=parent, dataType=C_NUMBER)
+        for trigger in trigger_list:
+            for number in numbers:
+                #print "the number and the trigger word are " + str(number.number) + " and " + str(trigger.triggerWord)
+                if( trigger.triggerWord.replace("-", "") == str(number.number).replace("-", "") ):
+                    #sendGcmAlert(teenProf, "Phone Call Alert: Detected a call from a number on the trigger list !")
+                    alert = createAlert(type=C_NUMBER, date_created=datetime.datetime.now(), content=number.number, parent=parent)
+                    alert.save()
+                    print "Phone Call Alert: Detected a call from a number on the trigger list !"
+
+"""
+#Facebook data will not be analyzed here since it will not be sent from the phone
+#it will be accessed and processed strictly from the server
+    elif(triggerType == C_FB):
+        #fb_posts = dict.get("fb_posts")
+        fb_posts = FbPosts.objects.filter(owner=user)
+        trigger_list = Flags.objects.filter(owner=user, dataType=C_FB)
+        for trigger in trigger_list:
+            for post in fb_posts:
+                if(post.message):
+                    triggerHit = re.search(trigger.triggerWord, post.message, re.IGNORECASE)
+                    if(triggerHit):
+                        print "Social Alert: Detected a Post with that contains a word from trigger list !"
+                        sendGcmAlert(userProf, "Post Alert: Detected a Post with that contains a word from trigger list !")
+"""
 
 def getAppInfo(packageName):
     dict = {
               "query": {
                 "_id": "56d1f962ea9e198b7963d678",
-                "name": "snapchat",
+                "name": "",
                 "platform": "android",
                 "query_params": {
                   "sort": "number_ratings",
@@ -76,20 +178,25 @@ def getAppInfo(packageName):
 def fetchAndProcess(dict):
     data_set = dict.get("data_set", "nothing")
     data_type = dict.get("data_type")
+    teenProfile = dict.get("profile")
+    owner = None
+
     if(data_type == C_TEXTS):
         #ANALYZE TEXTS AND MARK PROCESSED TRUE
         for text in data_set:
             content = text.content
-            dict = analyzeText(str(content))
+            resDict = analyzeText(str(content))
             text.emo_score = 0
-            if(dict.get("success") == True):
+            if(resDict.get("success") == True):
                 print "it got to the api successfully"
-                if(dict.get("emo_score") == "negative"):
+                if(resDict.get("emo_score") == "negative"):
                     text.emo_score = -1
-                elif(dict.get("emo_score") == "positive"):
+                elif(resDict.get("emo_score") == "positive"):
                     text.emo_score = 1
                 text.isProcessed = True
             text.save()
+        triggerCheck(dict)
+
     elif(data_type == C_APPS):
         for app in data_set:
             packageName = app.packageName
@@ -102,21 +209,28 @@ def fetchAndProcess(dict):
             #screenShot = appDict.get("screenshots", "nothing")[0]
             app.isProcessed = True
             app.save()
+        triggerCheck(dict)
+
     elif(data_type == C_WEBSITES):
         #ANALYZE_WEBSITES AND MARK PROCESSED TRUE
         for website in data_set:
-            site = website.site
-            site = "http://"+site
+            site = "http://"+website.site
             res = requests.get(site)
-            dict = {"api_key":DATUM_KEY, "text":res.text}
-            res = requests.post(TEXT_EXTRACTION_URL, dict)
+            reqDict = {"api_key":DATUM_KEY, "text":res.text}
+            res = requests.post(TEXT_EXTRACTION_URL, reqDict)
             extractedText = res.json().get("output").get("result", "")
-            dict["text"] = extractedText
-            res = requests.post(CATEGORY_URL, dict)
+            reqDict["text"] = extractedText
+            res = requests.post(CATEGORY_URL, reqDict)
             website.category = res.json().get("output").get("result", "nothing")
             website.isProcessed = True
             website.save()
+        triggerCheck(dict)
 
+    elif(data_type == C_NUMBER):
+        for number in data_set:
+            number.isProcessed = True
+            number.save()
+        triggerCheck(dict)
 
 class GetIds(generics.ListAPIView):
 
@@ -310,16 +424,20 @@ emotional analysis to include that score in the model creation
 reset the data back to now when done testing
 
 In future enable logging in case of UNIQUE constraint errors
+
+This is a hourly cronjob
 """
 def getFbData(user_profile):
+    _user = user_profile.user
     access_token = user_profile.fb_token
     now = datetime.datetime.now()
-    dict = {"access_token":access_token,"since":now,"limit":"1000"}
+    dict = {"access_token":access_token,"since":"2014-03-16","limit":"1000"}
     response = requests.get(FB_USER_NEWSFEED,params=dict)
     res = response.json()
     data = res.get("data")
-    profile = UserProfile.objects.all()[0]
-    user_name = str(profile.user)
+    #profile = UserProfile.objects.all()[0]
+    user_name = str(user_profile.user)
+
     for i in range(len(data)):
         id = data[i].get("id")
         name = getFrom(access_token, id)
@@ -331,13 +449,27 @@ def getFbData(user_profile):
         message = data[i].get("message")
         dict = analyzeText(str(message))
         score = 0
-        if(dict.get("success") == True):
+        trigger_list = Flags.objects.filter(owner=_user, dataType=C_FB)
+
+        if(dict.get("success") == True and message):
+            #checking for Trigger words in the posts
+            for trigger in trigger_list:
+                #print("The trigger word and the message respectively are " + str(trigger.triggerWord) + str(message))
+                triggerHit = re.search(trigger.triggerWord, message, re.IGNORECASE)
+                if(triggerHit):
+                    #print "Social Alert: Detected a Post with that contains a word from trigger list !"
+                    sendGcmAlert(user_profile, "Post Alert: Detected a Post with that contains a word from trigger list !")
+                    alert = createAlert(type=C_FB, date_created=datetime.datetime.now(), content=message, parent=user_profile.parent)
+                    alert.save()
+
+            #analyzing the post messages
             if(dict.get("emo_score") == "negative"):
                 score = -1
             elif(dict.get("emo_score") == "positive"):
                 score = 1
+
         try:
-            FbPosts.objects.update_or_create(creator=name, date_created=date, emo_score=int(score), id=str(id))
+            FbPosts.objects.update_or_create(creator=name, date_created=date, emo_score=int(score), id=str(id), owner=_user, message=message)
         except Exception as e:
             print e.message
 """
@@ -463,6 +595,8 @@ class Texts_View(generics.CreateAPIView):
         data_set = Texts.objects.filter(isProcessed=False)
         dict = {'data_set' : data_set}
         dict["data_type"] = C_TEXTS
+        dict["profile"] = self.request.user.User
+        #print "the user profile at the api is " + str(self.request.user.User)
         fetchAndProcess(dict)
 
     def get_serializer(self, *args, **kwargs):
@@ -485,6 +619,7 @@ class Apps(generics.CreateAPIView):
         data_set = App_list.objects.filter(isProcessed=False)
         dict = {'data_set' : data_set}
         dict["data_type"] = C_APPS
+        dict["profile"] = self.request.user.User
         fetchAndProcess(dict)
 
     def get_serializer(self, *args, **kwargs):
@@ -504,6 +639,18 @@ class PhoneCall(generics.CreateAPIView):
     authentication_classes = (TokenAuthentication,)
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user)
+        data_set = Phone_Calls.objects.filter(isProcessed=False)
+        dict = {'data_set' : data_set}
+        dict["data_type"] = C_NUMBER
+        dict["profile"] = self.request.user.User
+        fetchAndProcess(dict)
+
+    def get_serializer(self, *args, **kwargs):
+        if "data" in kwargs:
+            data = kwargs["data"]
+            if isinstance(data, list):
+                kwargs["many"] = True
+        return super(PhoneCall, self).get_serializer(*args, **kwargs)
 
     #When the authentication step is ready
     #permission_classes = (permissions.IsAuthenticated,)
@@ -527,12 +674,12 @@ class WebHistory(generics.CreateAPIView):
     permission_classes = (IsAuthenticated,)
     authentication_classes = (TokenAuthentication,)
 
-
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user)
         data_set = Web_History.objects.filter(isProcessed=False)
         dict = {'data_set' : data_set}
         dict["data_type"] = C_WEBSITES
+        dict["profile"] = self.request.user.User
         fetchAndProcess(dict)
 
     def get_serializer(self, *args, **kwargs):
@@ -593,6 +740,7 @@ def CreateNewUser(request):
     if(token == "Nothing"):
         raise Http404("There was no token sent in the JSON Object.")
     else:
+        print token
         verify_results = tokenVerifier(token)
         if(verify_results["isVerified"]):
             dict = verify_results["facebook_dict"]
