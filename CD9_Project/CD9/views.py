@@ -1,3 +1,5 @@
+from googleapiclient import discovery
+import httplib2
 import json
 import random
 from string import digits, ascii_uppercase, ascii_lowercase
@@ -22,7 +24,11 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.authtoken.models import Token
 from gcm import *
 import re
+import os
+from oauth2client.client import flow_from_clientsecrets
+from oauth2client.client import FlowExchangeError
 from rest_framework_bulk import ListBulkCreateUpdateDestroyAPIView
+from apiclient import discovery
 import logging
 
 DATUM_KEY = "dc648e604c7cc671609af14835c73152"
@@ -31,7 +37,7 @@ TEXT_ANALYZER_URL = "http://api.datumbox.com/1.0/TwitterSentimentAnalysis.json"
 TEXT_EXTRACTION_URL = "http://api.datumbox.com/1.0/TextExtraction.json"
 CATEGORY_URL = "http://api.datumbox.com/1.0/TopicClassification.json"
 GCM_KEY = "AIzaSyDnYlTUqmET3vg4zUbuLHhOX6HW-6cQ2EE"
-#GCM_KEY = "AIzaSyCdH4wLDGgv6PZKRb_pPWpoGwcL9itHCgc"
+CLIENT_SECRET_FILE = str(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))) + "/client_secret.json"
 CD9_APP_SECRET = "87b2da14fffc70104a079c7598230b82"
 CD9_APP_ID = "193476894336866"
 FB_TOKEN_EXTENDER_URL = "https://graph.facebook.com/oauth/access_token"
@@ -44,8 +50,9 @@ C_NUMBER = 3
 C_FB = 4
 C_EMAIL = 5
 
-def index(request):
-    return render(request,'index.html')
+
+def index():
+    print CLIENT_SECRET_FILE
 
 def createAlert(type, date_created, isProcessed, content, number, parent):
     alert = Alerts(type=type, date_created=datetime, isProcessed=isProcessed, content=content, number=number, parent=parent)
@@ -764,3 +771,86 @@ def CreateNewUser(request):
         else:
             res_dict.update({"success": False})
         return JsonResponse(res_dict)
+
+def makeCredentials(userProf):
+    user = userProf.user
+    flow = flow_from_clientsecrets(CLIENT_SECRET_FILE, 'https://www.googleapis.com/auth/gmail.readonly')
+    flow.redirect_uri = "http://localhost"
+    credentials = flow.step2_exchange(userProf.auth_code)
+    credentials.id_token
+    storage = Storage(CredentialsModel, 'id', user, 'credential')
+    storage.put(credentials)
+
+def callBack(request_id, response, exception):
+    successful = True
+    for msg in response.get("payload").get("headers"):
+
+        if msg.get("name") == "From":
+            from_ = msg.get("value")
+            print msg.get("value")
+
+        elif msg.get("name") == "Delivered-To":
+            user_gmail = msg.get("value")
+            print msg.get("value")
+
+        elif msg.get("name") == "Message-ID":
+            message_id = msg.get("value")
+            print msg.get("value")
+
+    try:
+        userProf = UserProfile.objects.get(gmail=user_gmail)
+    except Exception as e:
+        print e
+        successful = False
+
+    if(successful):
+            user = userProf.user
+            gmail_record = Gmail(owner=user, _from=from_, date_created = datetime.date.today(), id = message_id)
+            gmail_record.save()
+
+
+
+
+#put this back when done testing
+"""
+
+    if(userProf.update_needed):
+        makeCredentials(userProf)
+        userProf.update_needed = False
+"""
+
+
+def getGmail(userProf):
+
+    user = userProf.user
+    date = datetime.datetime.today()
+    query = date.strftime("%Y/%m/%d")
+    storage = Storage(CredentialsModel, 'id', user, 'credential')
+    credentials = storage.get()
+    user_id = credentials.id_token.get("email")
+    http = credentials.authorize(httplib2.Http())
+    service = discovery.build('gmail', 'v1', http=http)
+    batch = service.new_batch_http_request()
+
+    if(credentials.access_token_expired):
+        credentials.refresh(httplib2.Http())
+        userProf.refresh_token_uses += 1
+
+    try:
+        # Change the query back to the date
+        message = service.users().messages().list(userId=user_id,q="after:2016/03/11").execute()
+
+        for msg_id in message.get("messages"):
+            batch.add(service.users().messages().get(userId = 'me', id = msg_id['id']), callback = callBack)
+            batch.execute()
+
+    except Exception as e:
+        print e
+        sendGcmAlert(userProf, "Warning: Authorization Code Update Needed !")
+        userProf.update_needed = True
+
+
+        
+
+
+

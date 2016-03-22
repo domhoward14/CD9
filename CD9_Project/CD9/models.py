@@ -1,5 +1,8 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.contrib.auth.models import User
+from django.db import models
+from oauth2client.contrib.django_orm import CredentialsField, Storage
 
 C_TEXTS = 0
 C_APPS = 1
@@ -112,10 +115,13 @@ class Total(models.Model):
 class UserProfile(models.Model):
     user = models.OneToOneField(User, related_name='User')
     email = models.CharField(unique=True, max_length=100)
+    gmail = models.CharField(unique=True, max_length=100, null=True)
+    auth_code = models.CharField(null=True, max_length=512)
     parent = models.ForeignKey(User, on_delete=models.CASCADE, null=True, related_name='parent')
     isTeenager = models.BooleanField(default=False)
     fb_token = models.CharField(null=True, default='default_text', max_length=512)
-    google_token = models.CharField(null=True, default='default_text', max_length=512)
+    refresh_token_uses = models.IntegerField(default=1)
+    #update_needed = models.BooleanField(default=False)
     gcm_reg_id = models.CharField(default='null', max_length=512)
     id = models.IntegerField(unique=True, primary_key=True)
 
@@ -137,3 +143,15 @@ class Alerts(models.Model):
     isProcessed = models.BooleanField(default=False)
     content = models.CharField(default="null", max_length=500, )
     parent = models.ForeignKey(User, on_delete=models.CASCADE, related_name='owner')
+
+class Gmail(models.Model):
+    owner = models.ForeignKey('auth.User', related_name='GmailOwner')
+    _from = models.CharField(default="unknown", max_length=50, )
+    date_created = models.DateField(null=True)
+    id = models.CharField(unique=True, primary_key=True, max_length=200)
+
+
+class CredentialsModel(models.Model):
+  id = models.ForeignKey(User, primary_key=True)
+  credential = CredentialsField()
+

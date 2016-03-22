@@ -19,20 +19,17 @@ CREATE PARENT
 curl -X POST -d '{"username" : "uncle" , "password" : "password", "email" : "uncle@email.com"}' -H "Content-Type: application/json" -H "Authorization: Token 15a371f9b4d54eed58cdc49c304f01ed17ddb630" http://127.0.0.1:8000/CD9/api/add_parent/ > output.html
 
 UPDATE USER INFO
-curl -X PATCH -d '{"gcm_reg_id" : "cFB5VC4vZVo:APA91bHpB3HxyCLrMXBtE3W-rqVJLFKenDB_X_1nOBp0mZ-70PvXVpJZbymsD_e96K7Bqnhh-9lVeSI6WZfATy_yfWbU82cR5sxSyCzPxnt43WfWrt2nrmuusLXA67IAa4txWqT1zHpZ"}' -H "Content-Type: application/json" -H "Authorization: Token 1aa619689b45d540778d335414c803abd1b49571" http://127.0.0.1:8000/CD9/api/update_profile/USER_ID_HERE/ > output.html
+curl -X PATCH -d '{"auth_code" : "4/nzOdrbQIUmJLVQG0V19z5GTu2CLDxPW-fPDarn8X1QY"}' -H "Content-Type: application/json" -H "Authorization: Token 9ff246b2123e942d782af89c106cb6d2f018a72d" http://127.0.0.1:8000/CD9/api/update_profile/164851885831702/ > output.html
 
 GET TEEN AND PARENT ID
-curl -H "Authorization: Token 1aa619689b45d540778d335414c803abd1b49571" http://127.0.0.1:8000/CD9/api/get_ids/ > output.html
+curl -H "Authorization: Token bf484b516de1a402e822faf777ede33436ce1c98" http://127.0.0.1:8000/CD9/api/get_ids/ > output.html
 
 CURRENT USER INFO
-{"token": "3d866ff27657f91b0cde032e091114f8e36ca73b", "success": true}
+{"token": "bf484b516de1a402e822faf777ede33436ce1c98", "success": true}
 """
 
 """
-TODO
-use the site api and app site api
-social media data collection
-google api’s and push notifications
-    figure out what information is needed during registration time
-    long lived tokens
+Misc
+Server Client ID -> 53665769505-bp4qm9qb1e8b5d2csrqtanib9i9fei4m.apps.googleusercontent.com
+Client Secret -> U_nBrZxrJO3gRDkW52caEXqo
 """
