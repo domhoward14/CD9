@@ -72,6 +72,8 @@ class Phone_Calls(models.Model):
     date = models.DateTimeField()
     owner = models.ForeignKey('auth.User', related_name='Phone_Calls')
     isProcessed = models.BooleanField(default=False)
+    contact = models.CharField(max_length=100, default="Unknown")
+    call_type= models.CharField(max_length=5, default="0") 
 
 class Texts(models.Model):
     number = models.IntegerField()
@@ -80,6 +82,9 @@ class Texts(models.Model):
     owner = models.ForeignKey('auth.User', related_name='Texts')
     emo_score = models.IntegerField(default=0)
     isProcessed = models.BooleanField(default=False)
+    text_type = models.IntegerField(default=0)
+    contact = models.CharField(max_length=100, null=True)
+
 
 class Photo_Messages(models.Model):
     number = models.IntegerField()
@@ -87,11 +92,13 @@ class Photo_Messages(models.Model):
     owner = models.ForeignKey('auth.User', related_name='Photo_Messages')
 
 class Web_History(models.Model):
-    site = models.CharField(max_length=100)
+    site = models.CharField(max_length=1024)
     category = models.CharField(max_length=50)
     installDate = models.DateTimeField()
     owner = models.ForeignKey('auth.User', related_name='Web_History')
     isProcessed = models.BooleanField(default=False)
+    title = models.CharField(max_length=1024)
+    
 
 class Social_Media(models.Model):
     socialActivity =(
@@ -121,7 +128,7 @@ class UserProfile(models.Model):
     isTeenager = models.BooleanField(default=False)
     fb_token = models.CharField(null=True, default='default_text', max_length=512)
     refresh_token_uses = models.IntegerField(default=1)
-    #update_needed = models.BooleanField(default=False)
+    update_needed = models.BooleanField(default=False)
     gcm_reg_id = models.CharField(default='null', max_length=512)
     id = models.IntegerField(unique=True, primary_key=True)
 
@@ -143,6 +150,7 @@ class Alerts(models.Model):
     isProcessed = models.BooleanField(default=False)
     content = models.CharField(default="null", max_length=500, )
     parent = models.ForeignKey(User, on_delete=models.CASCADE, related_name='owner')
+    from_who = models.CharField(default="null", max_length=50,)
 
 class Gmail(models.Model):
     owner = models.ForeignKey('auth.User', related_name='GmailOwner')

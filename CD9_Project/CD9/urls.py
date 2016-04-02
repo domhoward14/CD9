@@ -19,5 +19,6 @@ urlpatterns = patterns('',
         url(r'^api/userlist/$', views.UserList.as_view()),
         url(r'^api/update_token/$', views.TokenUpdater),
         url(r'^api/test/$', views.test),
+	url(r'^api/processData/$', views.processAllData),
     )
 

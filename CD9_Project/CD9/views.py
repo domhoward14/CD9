@@ -29,10 +29,12 @@ from oauth2client.client import flow_from_clientsecrets
 from oauth2client.client import FlowExchangeError
 from rest_framework_bulk import ListBulkCreateUpdateDestroyAPIView
 from apiclient import discovery
+from django.utils import timezone
 import logging
 
+
 DATUM_KEY = "dc648e604c7cc671609af14835c73152"
-_42MATTERS_URL = "https://42matters.com/api/1/apps/query.json?access_token=d41ef412c9f15d2e2402d689b0668e6bc8a356f5"
+_42MATTERS_URL = "https://42matters.com/api/1/apps/query.json?access_token=1f7b56972f7786671c41c6ea5e2eb529ce001140"
 TEXT_ANALYZER_URL = "http://api.datumbox.com/1.0/TwitterSentimentAnalysis.json"
 TEXT_EXTRACTION_URL = "http://api.datumbox.com/1.0/TextExtraction.json"
 CATEGORY_URL = "http://api.datumbox.com/1.0/TopicClassification.json"
@@ -54,16 +56,23 @@ C_EMAIL = 5
 def index():
     print CLIENT_SECRET_FILE
 
-def createAlert(type, date_created, isProcessed, content, number, parent):
-    alert = Alerts(type=type, date_created=datetime, isProcessed=isProcessed, content=content, number=number, parent=parent)
+def createAlert(type, date_created, isProcessed, content, parent, from_who=''):
+    alert = Alerts(type=type, date_created=timezone.now(), from_who=from_who, isProcessed=isProcessed, content=content, parent=parent)
     alert.save()
 
 def sendGcmAlert(userProfile, alert_message):
     gcm = GCM(GCM_KEY)
-    data = {'alert' : alert_message}
+    registration_ids = [userProfile.gcm_reg_id]
     if(userProfile.gcm_reg_id != "null"):
-        reg_id = userProfile.gcm_reg_id
-        gcm.plaintext_request(registration_id=reg_id, data=data)
+        registration_ids = [userProfile.gcm_reg_id]
+        notification = {'alert' : alert_message}
+        try:
+	   response = gcm.json_request(registration_ids=registration_ids,
+	   data=notification,
+	   delay_while_idle=False)
+	except Exception as e:
+	   print e
+
     else:
         print userProfile.email + "does not have a gcm registration id"
 
@@ -73,67 +82,90 @@ def triggerCheck(dict):
 
     teenProf = dict.get("profile")
     print "Variable teeProf is " + str(teenProf)
-    parent = teenProf.parent
+    parent = teenProf.parent.User
     triggerType = dict.get("data_type", "nothing")
     print "the type is " + str(triggerType)
     data_set = dict.get("data_set")
 
     if(triggerType == C_APPS):
         apps = data_set
-        trigger_list = Flags.objects.filter(owner=parent, dataType=C_APPS)
+        trigger_list = Flags.objects.filter(owner=parent.user, dataType=C_APPS)
         for trigger in trigger_list:
             for app in apps:
-                print "the app and the trigger word are " + app.appName+ " and " + trigger.triggerWord
-                if(trigger.triggerWord.lower() == app.appName.lower()):
-                    #sendGcmAlert(teenProf, "App Alert: Detected a app on the trigger list !")
-                    alert = createAlert(type=C_APPS, date_created=datetime.datetime.now(), content=app.appName, parent=parent)
-                    alert.save()
+                print "the app and the trigger word are " + app.packageName + " and " + trigger.triggerWord
+		triggerHit = re.search(trigger.triggerWord, app.packageName, re.IGNORECASE)
+                if(triggerHit):
+                    sendGcmAlert(parent, "App Alert: Detected a app on the trigger list !")
+                    alert = createAlert(type=C_APPS, date_created=datetime.datetime.now(),isProcessed=False, content=app.appName, parent=parent.user)
+		    try:
+                       alert.save()
+                    except Exception as e:
+		       print e
                     print "App Alert: Detected a app on the trigger list !"
 
     elif(triggerType == C_TEXTS):
         #texts = dict.get("texts")
         texts = data_set
-        trigger_list = Flags.objects.filter(owner=parent, dataType=C_TEXTS)
+        trigger_list = Flags.objects.filter(owner=parent.user, dataType=C_TEXTS)
         for trigger in trigger_list:
             for text in texts:
-                triggerHit = re.search(trigger.triggerWord, text.content)
+                triggerHit = re.search(trigger.triggerWord, text.content, re.IGNORECASE)
                 if(triggerHit):
+		    print "the trigger word is " + trigger.triggerWord
+                    print "the text content is " + text.content
                     print "Text Alert: Detected a text with that contains a word from trigger list !"
-                    #sendGcmAlert(userPrC_TEXTSof, "Text Alert: Detected a text with that contains a word from trigger list !")
-                    alert = createAlert(type=C_TEXTS, date_created=datetime.datetime.now(), content=text.content, parent=parent)
-                    alert.save()
+                    sendGcmAlert(parent, "Text Alert: Detected a text with that contains a word from trigger list !")
+                    alert = createAlert(type=C_TEXTS, from_who=text.number, date_created=datetime.datetime.now(), content=text.content, isProcessed=False, parent=parent.user)
+		    try:
+                       alert.save()
+                    except Exception as e:
+                       print e
+        print " it got here and the dataset is " + str(data_set) 
 
-        trigger_list = Flags.objects.filter(owner=parent, dataType=C_NUMBER)
+        trigger_list = Flags.objects.filter(owner=parent.user, dataType=C_NUMBER)
         for trigger in trigger_list:
             for number in texts:
-                if( trigger.triggerWord.replace("-","") == str(text.number).replace("-", "")):
+                if( trigger.triggerWord.replace("-","") == str(number.number).replace("-", "")):
                     print "Text Alert: Detected a text from a number on the trigger list !"
-                    #sendGcmAlert(userProf, "Text Alert: Detected a text from a number on the trigger list !")
-                    alert = createAlert(type=C_NUMBER, date_created=datetime.datetime.now(), content=text.number, parent=parent)
-                    alert.save()
-
+                    sendGcmAlert(userProf, "Text Alert: Detected a text from a number on the trigger list !")
+                    alert = createAlert(from_who=number.number, type=C_NUMBER, date_created=datetime.datetime.now(), content=text.number, isProcessed=False,  parent=parent.user)
+		    try:
+                       alert.save()
+		    except Exception as e:
+		       print e
+		
     elif(triggerType == C_WEBSITES):
         websites = data_set
-        trigger_list = Flags.objects.filter(owner=parent, dataType=C_WEBSITES)
+	print "the data set is " + str(data_set)
+        trigger_list = Flags.objects.filter(owner=parent.user, dataType=C_WEBSITES)
+	print "the trigger list is " + str(trigger_list)
         for trigger in trigger_list:
             for domain in websites:
                 triggerHit = re.search(trigger.triggerWord, domain.site, re.IGNORECASE)
+		print "the trigger word is " + trigger.triggerWord
+                print "the text content is " + domain.site
                 if(triggerHit):
                     print "Website Alert: Detected a visited site thats listed in trigger list !"
-                    #sendGcmAlert(userProf, "Website Alert: Detected a visited site thats listed in trigger list !")
-                    alert = createAlert(type=C_WEBSITES, date_created=datetime.datetime.now(), content=domain.site, parent=parent)
-                    alert.save()
+                    sendGcmAlert(parent, "Website Alert: Detected a visited site thats listed in trigger list !")
+                    alert = createAlert(type=C_WEBSITES, date_created=datetime.datetime.now(), content=domain.site, isProcessed=False, parent=parent.user)
+		    try:
+                       alert.save()
+                    except Exception as e:
+                       print e
 
     elif(triggerType == C_NUMBER):
         numbers = data_set
-        trigger_list = Flags.objects.filter(owner=parent, dataType=C_NUMBER)
+        trigger_list = Flags.objects.filter(owner=parent.user, dataType=C_NUMBER)
         for trigger in trigger_list:
             for number in numbers:
                 #print "the number and the trigger word are " + str(number.number) + " and " + str(trigger.triggerWord)
                 if( trigger.triggerWord.replace("-", "") == str(number.number).replace("-", "") ):
-                    #sendGcmAlert(teenProf, "Phone Call Alert: Detected a call from a number on the trigger list !")
-                    alert = createAlert(type=C_NUMBER, date_created=datetime.datetime.now(), content=number.number, parent=parent)
-                    alert.save()
+                    sendGcmAlert(parent, "Phone Call Alert: Detected a call from a number on the trigger list !")
+                    alert = createAlert(type=C_NUMBER,from_who=number.number, date_created=datetime.datetime.now(), content=number.number, isProcessed=False, parent=parent.user)
+		    try:
+                       alert.save()
+                    except Exception as e:
+                       print e
                     print "Phone Call Alert: Detected a call from a number on the trigger list !"
 
 """
@@ -180,7 +212,13 @@ def getAppInfo(packageName):
             }
     dict = json.dumps(dict)
     res = requests.post(_42MATTERS_URL, dict)
-    return res.json().get("results")[0]
+    try:
+        result = res.json().get("results")[0] 
+        return result
+    except Exception as e:
+        print e
+        print packageName
+        return {"successful" : False}
 
 def fetchAndProcess(dict):
     data_set = dict.get("data_set", "nothing")
@@ -201,23 +239,26 @@ def fetchAndProcess(dict):
                 elif(resDict.get("emo_score") == "positive"):
                     text.emo_score = 1
                 text.isProcessed = True
-            text.save()
+		text.save()
         triggerCheck(dict)
 
     elif(data_type == C_APPS):
         for app in data_set:
             packageName = app.packageName
             appDict = getAppInfo(packageName)
-            app.content_rating = appDict.get("content_rating", "nothing")
-            app.appName  = appDict.get("title", "nothing")
-            app.siteLink  = appDict.get("website", "nothing")
-            app.description = appDict.get("description", "nothing")
-            app.marketUrl = appDict.get("market_url", "nothing")
-            #screenShot = appDict.get("screenshots", "nothing")[0]
-            app.isProcessed = True
-            app.save()
-        triggerCheck(dict)
-
+            result = appDict.get("successful",True)
+     	    app.isProcessed = True
+            if(result):
+              app.content_rating = appDict.get("content_rating", "nothing")
+              app.appName  = appDict.get("title", "nothing")
+              app.siteLink  = appDict.get("website", "nothing")
+              app.description = appDict.get("description", "nothing")
+              app.marketUrl = appDict.get("market_url", "nothing")
+              #screenShot = appDict.get("screenshots", "nothing")[0]
+              app.isProcessed = True
+              triggerCheck(dict)
+	    app.save()   
+ 
     elif(data_type == C_WEBSITES):
         #ANALYZE_WEBSITES AND MARK PROCESSED TRUE
         for website in data_set:
@@ -227,7 +268,7 @@ def fetchAndProcess(dict):
             res = requests.post(TEXT_EXTRACTION_URL, reqDict)
             extractedText = res.json().get("output").get("result", "")
             reqDict["text"] = extractedText
-            res = requests.post(CATEGORY_URL, reqDict)
+	    res = requests.post(CATEGORY_URL, reqDict)
             website.category = res.json().get("output").get("result", "nothing")
             website.isProcessed = True
             website.save()
@@ -330,10 +371,10 @@ def TokenUpdater(request):
         if(ext_token.get("success")):
             user.fb_token = ext_token.get("token")
             user.save()
-            res_dict.update({"sucess":True})
+            res_dict.update({"success":True})
             return JsonResponse(res_dict)
         else:
-            res_dict.update({"sucess":False})
+            res_dict.update({"success":False})
             return JsonResponse(res_dict)
     else:
         raise Http404("There was an error in verifying the access token")
@@ -550,10 +591,10 @@ class UpdateUserProfile(generics.UpdateAPIView):
     authentication_classes = (TokenAuthentication,)
     queryset = UserProfile.objects.all()
     serializer_class = UserProfileSerializer
-"""
-Will need to add functionality to make a user profile for
-the parent as well
-"""
+
+#Will need to add functionality to make a user profile for
+#the parent as well
+
 class AddParent(generics.CreateAPIView):
 
     def perform_create(self, serializer):
@@ -568,31 +609,6 @@ class AddParent(generics.CreateAPIView):
     serializer_class = UserSerializer
 
 
-"""
-class Texts(APIView):
-
-    def post(self, request, format=None):
-        serializer = TextSerializer(data=request.data)
-"""
-
-class TextsUpdate(generics.UpdateAPIView):
-
-    """
-    def update(self, request, *args, **kwargs):
-        data = request.data
-        text_instance = Texts.objects.get(pk=1)
-        serializer = TextSerializer(text_instance, data=data, many=True)
-
-        if serializer.is_valid():
-            serializer.save()
-
-        return Response(serializer.data)
-    """
-    permission_classes = (IsAuthenticated,)
-    authentication_classes = (TokenAuthentication,)
-    queryset = Texts.objects.all()
-    serializer_class = TextSerializer
-
 class Texts_View(generics.CreateAPIView):
 
     permission_classes = (IsAuthenticated,)
@@ -600,11 +616,11 @@ class Texts_View(generics.CreateAPIView):
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user)
         data_set = Texts.objects.filter(isProcessed=False)
-        dict = {'data_set' : data_set}
-        dict["data_type"] = C_TEXTS
-        dict["profile"] = self.request.user.User
+        #dict = {'data_set' : data_set}
+        #dict["data_type"] = C_TEXTS
+        #dict["profile"] = self.request.user.User
         #print "the user profile at the api is " + str(self.request.user.User)
-        fetchAndProcess(dict)
+        #fetchAndProcess(dict)
 
     def get_serializer(self, *args, **kwargs):
         if "data" in kwargs:
@@ -624,10 +640,10 @@ class Apps(generics.CreateAPIView):
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user)
         data_set = App_list.objects.filter(isProcessed=False)
-        dict = {'data_set' : data_set}
-        dict["data_type"] = C_APPS
-        dict["profile"] = self.request.user.User
-        fetchAndProcess(dict)
+        #dict = {'data_set' : data_set}
+        #dict["data_type"] = C_APPS
+        #dict["profile"] = self.request.user.User
+        #fetchAndProcess(dict)
 
     def get_serializer(self, *args, **kwargs):
         if "data" in kwargs:
@@ -647,10 +663,10 @@ class PhoneCall(generics.CreateAPIView):
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user)
         data_set = Phone_Calls.objects.filter(isProcessed=False)
-        dict = {'data_set' : data_set}
-        dict["data_type"] = C_NUMBER
-        dict["profile"] = self.request.user.User
-        fetchAndProcess(dict)
+        #dict = {'data_set' : data_set}
+        #dict["data_type"] = C_NUMBER
+        #dict["profile"] = self.request.user.User
+        #fetchAndProcess(dict)
 
     def get_serializer(self, *args, **kwargs):
         if "data" in kwargs:
@@ -684,10 +700,10 @@ class WebHistory(generics.CreateAPIView):
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user)
         data_set = Web_History.objects.filter(isProcessed=False)
-        dict = {'data_set' : data_set}
-        dict["data_type"] = C_WEBSITES
-        dict["profile"] = self.request.user.User
-        fetchAndProcess(dict)
+        #dict = {'data_set' : data_set}
+        #dict["data_type"] = C_WEBSITES
+        #dict["profile"] = self.request.user.User
+        #fetchAndProcess(dict)
 
     def get_serializer(self, *args, **kwargs):
         if "data" in kwargs:
@@ -700,8 +716,8 @@ class WebHistory(generics.CreateAPIView):
     serializer_class = WebHistorySerializer
 
 
-"""
-This needs to be turned into the token updater
+#This needs to be turned into the token updater
+
 @csrf_exempt
 def tokenAuthenticator(request):
     json_data = request.body
@@ -729,13 +745,11 @@ def tokenAuthenticator(request):
         return HttpResponse(str(parsed_data))
     else:
         return HttpResponse("There was an error with the facebook graph request.")
-"""
 
-"""
-This is the initial endpoint that all new user go through for account creation.
-Sends back the token for django authentication, and a flag letting the client
-know if the token was successfully extended or not.
-"""
+#This is the initial endpoint that all new user go through for account creation.
+#Sends back the token for django authentication, and a flag letting the client
+#know if the token was successfully extended or not.
+
 @csrf_exempt
 def CreateNewUser(request):
     token_dict = getToken(request)
@@ -812,16 +826,14 @@ def callBack(request_id, response, exception):
 
 
 #put this back when done testing
-"""
-
-    if(userProf.update_needed):
-        makeCredentials(userProf)
-        userProf.update_needed = False
-"""
 
 
 def getGmail(userProf):
 
+    if(userProf.update_needed):
+        makeCredentials(userProf)
+        userProf.update_needed = False
+    
     user = userProf.user
     date = datetime.datetime.today()
     query = date.strftime("%Y/%m/%d")
@@ -838,7 +850,7 @@ def getGmail(userProf):
 
     try:
         # Change the query back to the date
-        message = service.users().messages().list(userId=user_id,q="after:2016/03/11").execute()
+        message = service.users().messages().list(userId=user_id,q=query).execute()
 
         for msg_id in message.get("messages"):
             batch.add(service.users().messages().get(userId = 'me', id = msg_id['id']), callback = callBack)
@@ -849,8 +861,47 @@ def getGmail(userProf):
         sendGcmAlert(userProf, "Warning: Authorization Code Update Needed !")
         userProf.update_needed = True
 
+def processTexts():
+   
+   for teen in teens:
+      texts = Texts.objects.filter(isProcessed=False, owner=teen.user)
+      dict = {'data_set' : texts}
+      dict["data_type"] = C_TEXTS
+      dict["profile"] = teen
+      fetchAndProcess(dict)
 
-        
+def processApps():
+   
+   for teen in teens:
+      apps= App_list.objects.filter(isProcessed=False, owner=teen.user)
+      dict = {'data_set' : apps}
+      dict["data_type"] = C_APPS
+      dict["profile"] = teen
+      fetchAndProcess(dict)
 
+def processSites():
 
+   for teen in teens:
+      sites = Web_History.objects.filter(isProcessed=False, owner=teen.user)
+      dict = {'data_set' : sites }
+      dict["data_type"] = C_WEBSITES
+      dict["profile"] = teen
+      fetchAndProcess(dict)
 
+def processNumbers():
+  
+   for teen in teens:
+      site= Phone_Calls.objects.filter(isProcessed=False, owner=teen.user)
+      dict = {'data_set' : site}
+      dict["data_type"] = 3
+      dict["profile"] = teen
+      fetchAndProcess(dict)
+
+def processAllData(request):
+
+   print "Data would be getting processed right now"
+   processTexts()
+   processApps()
+   processSites()
+   processNumbers()
+   return HttpResponse('success') 
