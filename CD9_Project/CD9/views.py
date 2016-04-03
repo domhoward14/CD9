@@ -25,11 +25,15 @@ from rest_framework.authtoken.models import Token
 from gcm import *
 import re
 import os
+from django.http import HttpResponseRedirect
 from oauth2client.client import flow_from_clientsecrets
 from oauth2client.client import FlowExchangeError
 from rest_framework_bulk import ListBulkCreateUpdateDestroyAPIView
 from apiclient import discovery
 from django.utils import timezone
+from django.contrib.auth import authenticate, logout
+from django.contrib.auth import login as auth_login
+from django.contrib.auth.decorators import login_required
 import logging
 
 
@@ -52,9 +56,21 @@ C_NUMBER = 3
 C_FB = 4
 C_EMAIL = 5
 
+@login_required
+def index(request):
+   return render(request, 'index.html')
 
-def index():
-    print CLIENT_SECRET_FILE
+def login (request):
+   return render(request, 'login.html')
+
+@login_required
+def user_logout(request):
+    logout(request)
+    return render(request, 'login.html')
+
+def daniel (request):
+   return render(request, 'dan_index.html')
+
 
 def createAlert(type, date_created, isProcessed, content, parent, from_who=''):
     alert = Alerts(type=type, date_created=timezone.now(), from_who=from_who, isProcessed=isProcessed, content=content, parent=parent)
@@ -120,7 +136,7 @@ def triggerCheck(dict):
                        alert.save()
                     except Exception as e:
                        print e
-        print " it got here and the dataset is " + str(data_set) 
+        print " it got here and the dataset is " + str(data_set)
 
         trigger_list = Flags.objects.filter(owner=parent.user, dataType=C_NUMBER)
         for trigger in trigger_list:
@@ -133,7 +149,7 @@ def triggerCheck(dict):
                        alert.save()
 		    except Exception as e:
 		       print e
-		
+
     elif(triggerType == C_WEBSITES):
         websites = data_set
 	print "the data set is " + str(data_set)
@@ -213,7 +229,7 @@ def getAppInfo(packageName):
     dict = json.dumps(dict)
     res = requests.post(_42MATTERS_URL, dict)
     try:
-        result = res.json().get("results")[0] 
+        result = res.json().get("results")[0]
         return result
     except Exception as e:
         print e
@@ -257,8 +273,8 @@ def fetchAndProcess(dict):
               #screenShot = appDict.get("screenshots", "nothing")[0]
               app.isProcessed = True
               triggerCheck(dict)
-	    app.save()   
- 
+	    app.save()
+
     elif(data_type == C_WEBSITES):
         #ANALYZE_WEBSITES AND MARK PROCESSED TRUE
         for website in data_set:
@@ -599,6 +615,8 @@ class AddParent(generics.CreateAPIView):
 
     def perform_create(self, serializer):
         parent = serializer.save()
+        parent.set_password(parent.password)
+        parent.save()
         profile = UserProfile.objects.create(user=parent, email=parent.email, id=generateId())
         teenager = UserProfile.objects.get(email=self.request.user.email)
         teenager.parent = parent
@@ -772,6 +790,8 @@ def CreateNewUser(request):
                 password = generatePassword()
                 id = generateId()
                 user = User.objects.create(username=name,password=password, email=email)
+                user.set_password(password)
+                user.save()
                 UserProfile.objects.create(user=user, email=email, isTeenager=True, id=id, fb_token=ext_token.get("token", token))
             except Exception as e:
                 error = e.message
@@ -833,7 +853,7 @@ def getGmail(userProf):
     if(userProf.update_needed):
         makeCredentials(userProf)
         userProf.update_needed = False
-    
+
     user = userProf.user
     date = datetime.datetime.today()
     query = date.strftime("%Y/%m/%d")
@@ -862,7 +882,7 @@ def getGmail(userProf):
         userProf.update_needed = True
 
 def processTexts():
-   
+
    for teen in teens:
       texts = Texts.objects.filter(isProcessed=False, owner=teen.user)
       dict = {'data_set' : texts}
@@ -871,7 +891,7 @@ def processTexts():
       fetchAndProcess(dict)
 
 def processApps():
-   
+
    for teen in teens:
       apps= App_list.objects.filter(isProcessed=False, owner=teen.user)
       dict = {'data_set' : apps}
@@ -889,7 +909,7 @@ def processSites():
       fetchAndProcess(dict)
 
 def processNumbers():
-  
+
    for teen in teens:
       site= Phone_Calls.objects.filter(isProcessed=False, owner=teen.user)
       dict = {'data_set' : site}
@@ -904,4 +924,46 @@ def processAllData(request):
    processApps()
    processSites()
    processNumbers()
-   return HttpResponse('success') 
+   return HttpResponse('success')
+
+def loginUser(request):
+    # If the request is a HTTP POST, try to pull out the relevant information.
+    if request.method == 'POST':
+        print request.POST.viewkeys()
+        # Gather the username and password provided by the user.
+        # This information is obtained from the login form.
+                # We use request.POST.get('<variable>') as opposed to request.POST['<variable>'],
+                # because the request.POST.get('<variable>') returns None, if the value does not exist,
+                # while the request.POST['<variable>'] will raise key error exception
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+
+        # Use Django's machinery to attempt to see if the username/password
+        # combination is valid - a User object is returned if it is.
+        user = authenticate(username=username, password=password)
+
+        # If we have a User object, the details are correct.
+        # If None (Python's way of representing the absence of a value), no user
+        # with matching credentials was found.
+        if user:
+            print "this worked !"
+            # Is the account active? It could have been disabled.
+            if user.is_active:
+                # If the account is valid and active, we can log the user in.
+                # We'll send the user back to the homepage.
+                auth_login(request, user)
+                return HttpResponseRedirect('/CD9/')
+            else:
+                # An inactive account was used - no logging in!
+                return HttpResponse("Your CD9 account is disabled.")
+        else:
+            # Bad login details were provided. So we can't log the user in.
+            print "Invalid login details: {0}, {1}".format(username, password)
+            return HttpResponse("Invalid login details supplied.")
+
+    # The request is not a HTTP POST, so display the login form.
+    # This scenario would most likely be a HTTP GET.
+    else:
+        # No context variables to pass to the template system, hence the
+        # blank dictionary object...
+        return render(request, 'login.html', {})

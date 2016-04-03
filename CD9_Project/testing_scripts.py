@@ -25,7 +25,7 @@ GET TEEN AND PARENT ID
 curl -H "Authorization: Token fde3bcd533ce553d835bdce5718da597d95cf7d8" http://127.0.0.1:8000/CD9/api/get_ids/ > output.html
 
 CURRENT USER INFO
-{"token": "9859803db5abd0d54576121da57dcbf300e6c85a", "success": true}
+{"token": "0812dce6f7206d4b06ebbc4447051d7b090cd8a3", "success": true}
 """
 
 """
@@ -33,3 +33,4 @@ Misc
 Server Client ID -> 53665769505-bp4qm9qb1e8b5d2csrqtanib9i9fei4m.apps.googleusercontent.com
 Client Secret -> U_nBrZxrJO3gRDkW52caEXqo
 """
+{"token": "45671c1592bdac82d489ce40acf9e4679838a763", "success": true}
