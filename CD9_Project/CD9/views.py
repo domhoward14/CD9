@@ -14,8 +14,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from django.http import Http404
-from serializers import UserProfileSerializer, TextSerializer, AppSerializer, PhotoMessagesSerializer, \
-    PhoneCallSerializer, WebHistorySerializer, UserSerializer
+from serializers import *
 from models import *
 from rest_framework import generics
 from rest_framework import permissions
@@ -25,6 +24,7 @@ from rest_framework.authtoken.models import Token
 from gcm import *
 import re
 import os
+from forms import *
 from django.http import HttpResponseRedirect
 from oauth2client.client import flow_from_clientsecrets
 from oauth2client.client import FlowExchangeError
@@ -56,12 +56,42 @@ C_NUMBER = 3
 C_FB = 4
 C_EMAIL = 5
 
+def test(request):
+    if(request.method == "POST"):
+        form = SocialMediaForm(request.POST)
+        if (form.is_valid()):
+            #THIS IS WHERE THERE WILL NEED TO BE A SWITCH TO ROUTE TO THE CORRECT FORM
+            data = form.cleaned_data
+            print data.keys()
+            print data.values()
+            return HttpResponse("yay")
+        else:
+            return HttpResponse("nooooo")
+    else:
+        texts_form = TextsForm()
+        context_dict = {'texts_form': texts_form}
+        context_dict['social_media_form'] = SocialMediaForm()
+        context_dict['calls_form'] = CallsForm()
+        context_dict['apps_form'] = AppsForm()
+        context_dict['sites_form'] = SitesForm()
+        return render(request, 'settings.html', context_dict)
+
 @login_required
 def index(request):
-   return render(request, 'index.html')
+    return render(request, 'index.html')
 
 def login (request):
    return render(request, 'login.html')
+
+def settings (request):
+    if(request.method == "POST"):
+        form = SettingsForm(request.POST)
+        if (form.is_valid):
+            data = form.cleaned_data
+            return dir(data)
+    else:
+        form = SettingsForm()
+        return render(request, 'settings.html', {'form': form, 'i': 0})
 
 @login_required
 def user_logout(request):
@@ -70,6 +100,9 @@ def user_logout(request):
 
 def daniel (request):
    return render(request, 'dan_index.html')
+
+def daniel2 (request):
+   return render(request, 'danfile2.html')
 
 
 def createAlert(type, date_created, isProcessed, content, parent, from_who=''):
@@ -299,16 +332,17 @@ def fetchAndProcess(dict):
 class GetIds(generics.ListAPIView):
 
     permission_classes = (IsAuthenticated,)
-    authentication_classes = (TokenAuthentication,)
+    authentication_classes = (TokenAuthentication,BasicAuthentication)
     queryset = UserProfile.objects.all()
     serializer_class = UserProfileSerializer
 
     def get_queryset(self):
         user = self.request.user
-        profile = UserProfile.objects.get(email=user.email)
+        print user.User
+        profile = user.User
         list = UserProfile.objects.filter(email=profile.email)
-        print profile.parent.email
-        list2 = UserProfile.objects.filter(email=profile.parent.email)
+        print profile.user.email
+        list2 = UserProfile.objects.filter(email=profile.user.email)
         qs = list | list2
         return qs
 
@@ -587,11 +621,6 @@ def analyzeText(text):
     else:
         return {"success":False}
 
-
-@csrf_exempt
-def test(request):
-    return HttpResponse(request.user)
-
 class UserProfiles(generics.CreateAPIView):
 
     def perform_create(self, serializer):
@@ -604,12 +633,27 @@ class UserProfiles(generics.CreateAPIView):
 class UpdateUserProfile(generics.UpdateAPIView):
 
     permission_classes = (IsAuthenticated,)
-    authentication_classes = (TokenAuthentication,)
+    authentication_classes = (TokenAuthentication, BasicAuthentication)
+    queryset = UserProfile.objects.all()
+    serializer_class = UserProfileSerializer
+#Will need to add functionality to make a user profile for
+#the parent as well
+
+class AddAnotherTeen(generics.UpdateAPIView):
+
+    permission_classes = (IsAuthenticated,)
+    authentication_classes = (TokenAuthentication, BasicAuthentication)
     queryset = UserProfile.objects.all()
     serializer_class = UserProfileSerializer
 
-#Will need to add functionality to make a user profile for
-#the parent as well
+    def update(self, request, *args, **kwargs):
+        pk = kwargs.get("pk")
+        parent = UserProfile.objects.get(pk=pk)
+        teenager = UserProfile.objects.get(email=self.request.user.email)
+        teenager.parent = parent.user
+        teenager.save()
+        return HttpResponse("SUCCESSFUL")
+        #super(AddAnotherTeen, self).update(request, *args, **kwargs)
 
 class AddParent(generics.CreateAPIView):
 
@@ -626,6 +670,34 @@ class AddParent(generics.CreateAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
 
+class ping(generics.CreateAPIView):
+    #Endpoint responsible for taking the pings from the users
+    permission_classes = (IsAuthenticated,)
+    authentication_classes = (TokenAuthentication,)
+    queryset = Pings.objects.all()
+    serializer_class = PingSerializer
+
+    def perform_create(self, serializer):
+        serializer.save(owner=self.request.user, time=timezone.now(), hit=True)
+        for ping in Pings.objects.filter(owner=self.request.user, hit=False):
+            ping.delete()
+
+def ping_checker(request):
+        x = timezone.now()
+        regx =  str(x).split(':', 1)[0]
+        #Check if the teen pinged this hour, Then check if they have 3 or more
+        #misses
+        try:
+            for teen in UserProfile.objects.filter(isTeenager=True):
+                if(not Pings.objects.filter(time__regex=regx,owner=teen.user, hit=True)):
+                        y = Pings(hit=False, owner=teen.user, time=timezone.now())
+                        y.save()
+                if(len(Pings.objects.filter(hit=False, owner=teen.user)) >= 3):
+                    print "Potential App Bypass Warning ! :"
+                    sendGcmAlert(teen.parent.User, "Potential App Bypass Warning ! : The app has been unresponsive for the past three hours")
+        except Exception as e:
+            print e
+        return HttpResponse("successfully checked pings for entire database !")
 
 class Texts_View(generics.CreateAPIView):
 
@@ -804,6 +876,7 @@ def CreateNewUser(request):
             res_dict.update({"success": True})
         else:
             res_dict.update({"success": False})
+        res_dict.update({"password":password})
         return JsonResponse(res_dict)
 
 def makeCredentials(userProf):
@@ -881,49 +954,54 @@ def getGmail(userProf):
         sendGcmAlert(userProf, "Warning: Authorization Code Update Needed !")
         userProf.update_needed = True
 
-def processTexts():
+def processTexts(teens):
 
    for teen in teens:
-      texts = Texts.objects.filter(isProcessed=False, owner=teen.user)
-      dict = {'data_set' : texts}
-      dict["data_type"] = C_TEXTS
-      dict["profile"] = teen
-      fetchAndProcess(dict)
+      if teen.parent:
+          texts = Texts.objects.filter(isProcessed=False, owner=teen.user)
+          dict = {'data_set' : texts}
+          dict["data_type"] = C_TEXTS
+          dict["profile"] = teen
+          fetchAndProcess(dict)
 
-def processApps():
-
-   for teen in teens:
-      apps= App_list.objects.filter(isProcessed=False, owner=teen.user)
-      dict = {'data_set' : apps}
-      dict["data_type"] = C_APPS
-      dict["profile"] = teen
-      fetchAndProcess(dict)
-
-def processSites():
+def processApps(teens):
 
    for teen in teens:
-      sites = Web_History.objects.filter(isProcessed=False, owner=teen.user)
-      dict = {'data_set' : sites }
-      dict["data_type"] = C_WEBSITES
-      dict["profile"] = teen
-      fetchAndProcess(dict)
+      if teen.parent:
+          apps= App_list.objects.filter(isProcessed=False, owner=teen.user)
+          dict = {'data_set' : apps}
+          dict["data_type"] = C_APPS
+          dict["profile"] = teen
+          fetchAndProcess(dict)
 
-def processNumbers():
+def processSites(teens):
 
    for teen in teens:
-      site= Phone_Calls.objects.filter(isProcessed=False, owner=teen.user)
-      dict = {'data_set' : site}
-      dict["data_type"] = 3
-      dict["profile"] = teen
-      fetchAndProcess(dict)
+      if teen.parent:
+          sites = Web_History.objects.filter(isProcessed=False, owner=teen.user)
+          dict = {'data_set' : sites }
+          dict["data_type"] = C_WEBSITES
+          dict["profile"] = teen
+          fetchAndProcess(dict)
+
+def processNumbers(teens):
+
+   for teen in teens:
+      if teen.parent:
+          site= Phone_Calls.objects.filter(isProcessed=False, owner=teen.user)
+          dict = {'data_set' : site}
+          dict["data_type"] = 3
+          dict["profile"] = teen
+          fetchAndProcess(dict)
 
 def processAllData(request):
 
+   teens = UserProfile.objects.filter(isTeenager=True)
    print "Data would be getting processed right now"
-   processTexts()
-   processApps()
-   processSites()
-   processNumbers()
+   processTexts(teens)
+   processApps(teens)
+   processSites(teens)
+   processNumbers(teens)
    return HttpResponse('success')
 
 def loginUser(request):

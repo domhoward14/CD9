@@ -1,5 +1,5 @@
+import datetime
 from django.db import models
-from django.contrib.auth.models import User
 from django.contrib.auth.models import User
 from django.db import models
 from oauth2client.contrib.django_orm import CredentialsField, Storage
@@ -25,31 +25,12 @@ instead of the date field
 #Make a table for the parent
 #When more research is done implement the emotional score table
 
-
 #Class for parent to make custom alert triggers
 #Currently made for the parents to be alerted from custom inputted
 class Flags(models.Model):
     triggerWord = models.CharField(max_length=100)
     dataType = models.IntegerField(default=6)
     owner = models.ForeignKey('auth.User', related_name='Flags')
-
-#Options for the parent to customize some of the monitoring features
-class Data_Options(models.Model):
-    Monitoring_Feature = (
-        ('App', 'Installed Apps'),
-        ('Phone', 'Logged Phone Calls'),
-        ('Text', 'SMS/MMS'),
-        ('Pics', 'Photo Messaging'),
-        ('Web', 'Web History'),
-    )
-    owner = models.ForeignKey('auth.User', related_name='Data_Options')
-    Status = models.BooleanField(default=True)
-#   Threshold is still optional at this time
-#   Threshold = (
-#        ('Low', 'Passive'),
-#        ('Med', 'Moderate'),
-#        ('High', 'Conservative'),
-#    )
 
 #may want to add screenshots when doing the web GUI
 class App_list(models.Model):
@@ -63,6 +44,7 @@ class App_list(models.Model):
     owner = models.ForeignKey('auth.User', related_name='App_list')
     isProcessed = models.BooleanField(default=False)
     isAlert = models.BooleanField(default=False)
+    active_monitoring = models.BooleanField(default=True)
     #screenShot = models.CharField(max_length=200, null=True)
 
 #Also see how feasible it is to include contact names for texts, calls, etc ...
@@ -73,7 +55,8 @@ class Phone_Calls(models.Model):
     owner = models.ForeignKey('auth.User', related_name='Phone_Calls')
     isProcessed = models.BooleanField(default=False)
     contact = models.CharField(max_length=100, default="Unknown")
-    call_type= models.CharField(max_length=5, default="0") 
+    call_type= models.CharField(max_length=5, default="0")
+    active_monitoring = models.BooleanField(default=True)
 
 class Texts(models.Model):
     number = models.IntegerField()
@@ -84,6 +67,7 @@ class Texts(models.Model):
     isProcessed = models.BooleanField(default=False)
     text_type = models.IntegerField(default=0)
     contact = models.CharField(max_length=100, null=True)
+    active_monitoring = models.BooleanField(default=True)
 
 
 class Photo_Messages(models.Model):
@@ -98,18 +82,7 @@ class Web_History(models.Model):
     owner = models.ForeignKey('auth.User', related_name='Web_History')
     isProcessed = models.BooleanField(default=False)
     title = models.CharField(max_length=1024)
-    
-
-class Social_Media(models.Model):
-    socialActivity =(
-        ('inPost','Inbound Post'),
-        ('outPost','Outbound Post'),
-        ('msg','Text Messages'),
-        ('tag','Tagged'),
-        ('friends','Friend Requests'),
-    )
-    date = models.DateField()
-    owner = models.ForeignKey('auth.User', related_name='Social_Media')
+    active_monitoring = models.BooleanField(default=True)
 
 class Total(models.Model):
     totalApps = models.IntegerField()
@@ -143,6 +116,7 @@ class FbPosts(models.Model):
     trigger_hit = models.BooleanField(default=False)
     message = models.CharField(max_length=300, null=True)
     id = models.CharField(unique=True, primary_key=True, max_length=200)
+    active_monitoring = models.BooleanField(default=True)
 
 class Alerts(models.Model):
     type = models.IntegerField(default=10)
@@ -151,6 +125,7 @@ class Alerts(models.Model):
     content = models.CharField(default="null", max_length=500, )
     parent = models.ForeignKey(User, on_delete=models.CASCADE, related_name='owner')
     from_who = models.CharField(default="null", max_length=50,)
+
 
 class Gmail(models.Model):
     owner = models.ForeignKey('auth.User', related_name='GmailOwner')
@@ -163,3 +138,7 @@ class CredentialsModel(models.Model):
   id = models.ForeignKey(User, primary_key=True)
   credential = CredentialsField()
 
+class Pings (models.Model):
+  time = models.DateTimeField(default=datetime.datetime.now())
+  hit = models.BooleanField(default=True)
+  owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='ping_owner')

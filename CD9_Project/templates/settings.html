@@ -1,0 +1,238 @@
+{% extends 'base.html' %}
+
+<!-- Extended data for the title -->
+{% block title %}
+CD9 Settings
+{% endblock %}
+
+<!-- Extended data for the box title -->
+{% block box_title %}
+Edit Settings
+{% endblock %}
+
+<!-- Extended data for the top body portion -->
+{% block top %}
+<!-- Websites visited section -->
+<div class="row">
+  <div class="col-sm-12"><h2>Web Sites Visited</h2>
+    <form id="form" method="post" action="../test/">
+            {% csrf_token %}
+            {% for hidden in sites_form.hidden_fields %}
+                {{ hidden }}
+            {% endfor %}
+            {% for field in sites_form.visible_fields %}
+                {{ field.errors }}
+                {{ field.help_text }}
+                <label for="comment">{{ field.label}}:</label>
+              </br>
+                {{ field }}
+                </br>
+                </br>
+            {% endfor %}
+  </div>
+  <div class="col-sm-12">
+    <table class="table table-hover">
+  <thead>
+    <tr>
+      <th>Trigger Site List</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Sex.com</td>
+    </tr>
+    <tr>
+      <td>Beer.com</td>
+    </tr>
+    <tr>
+      <td>MaryJane.com</td>
+    </tr>
+  </tbody>
+</table>
+    <input type="submit" class="btn btn-primary" value="Submit">
+  </form>
+  </div>
+</div>
+
+<!-- Installed Apps section -->
+<div class="row">
+  <div class="col-sm-12"><h2>Installed Apps</h2>
+    <form id="form" method="post" action="../test/">
+            {% csrf_token %}
+            {% for hidden in apps_form.hidden_fields %}
+                {{ hidden }}
+            {% endfor %}
+            {% for field in apps_form.visible_fields %}
+                {{ field.errors }}
+                {{ field.help_text }}
+                <label for="comment">{{ field.label}}:</label>
+              </br>
+                {{ field }}
+                </br>
+                </br>
+            {% endfor %}
+  </div>
+  <div class="col-sm-12">
+    <table class="table table-hover">
+  <thead>
+    <tr>
+      <th>Trigger App List</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>snapchat</td>
+    </tr>
+    <tr>
+      <td>facebook</td>
+    </tr>
+    <tr>
+      <td>myspace</td>
+    </tr>
+  </tbody>
+</table>
+    <input type="submit" class="btn btn-primary" value="Submit">
+  </form>
+  </div>
+</div>
+
+<!-- Phone Calls section -->
+<div class="row">
+  <div class="col-sm-12"><h2>Call Logs</h2>
+    <form id="form" method="post" action="../test/">
+            {% csrf_token %}
+            {% for hidden in calls_form.hidden_fields %}
+                {{ hidden }}
+            {% endfor %}
+            {% for field in calls_form.visible_fields %}
+                {{ field.errors }}
+                {{ field.help_text }}
+                <label for="comment">{{ field.label}}:</label>
+              </br>
+                {{ field }}
+                </br>
+                </br>
+            {% endfor %}
+    </div>
+  </div>
+  <div class="col-sm-12">
+    <table class="table table-hover">
+  <thead>
+    <tr>
+      <th>Trigger Number List</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>777-555-5555</td>
+    </tr>
+    <tr>
+      <td>123-345-6789</td>
+    </tr>
+    <tr>
+      <td>123-456-7899</td>
+    </tr>
+  </tbody>
+</table>
+    <input type="submit" class="btn btn-primary" value="Submit">
+  </form>
+  </div>
+</div>
+
+<!-- Texts section -->
+<div class="row">
+  <div class="col-sm-12"><h2>Text Messages</h2>
+    <form id="form" method="post" action="../test/">
+            {% csrf_token %}
+            {% for hidden in texts_form.hidden_fields %}
+                {{ hidden }}
+            {% endfor %}
+            {% for field in texts_form.visible_fields %}
+                {{ field.errors }}
+                {{ field.help_text }}
+                <label for="comment">{{ field.label}}:</label>
+              </br>
+                {{ field }}
+                </br>
+                </br>
+            {% endfor %}
+  </div>
+  <div class="col-sm-12">
+    <table class="table table-hover">
+  <thead>
+    <tr>
+      <th>Trigger Word List</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Sex </td>
+    </tr>
+    <tr>
+      <td>Beer </td>
+    </tr>
+    <tr>
+      <td>MaryJane </td>
+    </tr>
+  </tbody>
+</table>
+    <input type="submit" class="btn btn-primary" value="Submit">
+  </form>
+  </div>
+</div>
+
+<!-- Social Media section -->
+<div class="row">
+  <div class="col-sm-12"><h2>Social Media</h2>
+  <form id="form" method="post" action="../test/">
+          {% csrf_token %}
+          {% for hidden in social_media_form.hidden_fields %}
+              {{ hidden }}
+          {% endfor %}
+          {% for field in social_media_form.visible_fields %}
+              {{ field.errors }}
+              {{ field.help_text }}
+              <label for="comment">{{ field.label}}:</label>
+            </br>
+              {{ field }}
+              </br>
+              </br>
+          {% endfor %}
+  </div>
+  <div class="col-sm-12">
+    <table class="table table-hover">
+  <thead>
+    <tr>
+      <th>Trigger Word List</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Beer</td>
+    </tr>
+    <tr>
+      <td>Sex</td>
+    </tr>
+    <tr>
+      <td>Mary Jane</td>
+    </tr>
+  </tbody>
+</table>
+    <input type="submit" class="btn btn-primary" value="Submit">
+  </form>
+  </div>
+</div>
+</br>
+{% endblock %}
+
+<!-- Extended data for the medium body portion -->
+{% block middle %}
+{% endblock %}
+
+<!-- Extended data for the bottom body portion -->
+{% block bottom %}
+{% endblock %}
+
+<!-- Extended data for the footer -->
+{% block footer %}
+{% endblock %}

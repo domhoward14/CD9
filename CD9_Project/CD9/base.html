@@ -1,12 +1,11 @@
 <!DOCTYPE html>
 <html>
-{{ load staticfiles}}
   <head>
     <!-- Extended data for the header -->
     {% block header %}{% endblock %}
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <title>CD9 Dashboard</title>
+    <title>{% block title %}{% endblock %}</title>
     <!-- Tell the browser to be responsive to screen width -->
     <meta content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" name="viewport">
     <!-- Bootstrap 3.3.5 -->
@@ -33,8 +32,9 @@
     <div class="wrapper">
 
       <header class="main-header">
-        <!-- Logo -->
-        <a href="../../index2.html" class="logo">
+        <!-- Logo hello!!!-->
+        <!-- Logo hello!!!-->
+        <a href="../CD9/index" class="logo">
           <!-- mini logo for sidebar mini 50x50 pixels -->
           <span class="logo-mini"><b>A</b>LT</span>
           <!-- logo for regular state and mobile devices -->
@@ -72,8 +72,8 @@
                 <i class="fa fa-dashboard"></i> <span>Dashboard</span> <i class="fa fa-angle-left pull-right"></i>
               </a>
               <ul class="treeview-menu">
-                <li><a href="../../index.html"><i class="fa fa-circle-o"></i> Dashboard v1</a></li>
-                <li><a href="../../index2.html"><i class="fa fa-circle-o"></i> Dashboard v2</a></li>
+                <li><a href="../CD9/index "><i class="fa fa-circle-o"></i> Dashboard v1</a></li>
+                <li><a href="../CD9/index"><i class="fa fa-circle-o"></i> Dashboard v2</a></li>
               </ul>
             </li>
             <li class="treeview">
@@ -211,8 +211,8 @@
         <!-- Content Header (Page header) -->
         <section class="content-header">
           <h1>
-            Blank page
-            <small>it all starts here</small>
+            {% block box_title %}
+            {% endblock %}
           </h1>
         </section>
 

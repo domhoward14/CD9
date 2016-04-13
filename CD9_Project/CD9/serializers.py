@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from rest_framework.serializers import ModelSerializer
-from models import Texts,UserProfile, App_list, Phone_Calls, Photo_Messages, Web_History
+from models import *
 from django.contrib.auth.models import User
 from rest_framework_bulk import (
     BulkListSerializer,
@@ -20,6 +20,10 @@ class TextSerializer(serializers.ModelSerializer):
         model = Texts
         fields = ('number', 'date', 'content', 'pk',)
 
+class PingSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Pings
+        fields = ('hit', 'time',)
 
 class UserProfileSerializer(serializers.ModelSerializer):
     class Meta:
@@ -45,9 +49,3 @@ class WebHistorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Web_History
         fields = ('site','installDate')
-
-
-
-
-
-

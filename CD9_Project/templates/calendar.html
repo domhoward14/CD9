@@ -1,0 +1,99 @@
+{% extends 'base.html' %}
+
+<!-- Extended data for the header -->
+{% block header %}
+<link rel="stylesheet" href="{{STATIC_URL}}css/calendar.css">
+{% endblock %}
+
+<!-- Extended data for the title -->
+{% block title %}
+Emotional Analysis Calendar
+{% endblock %}
+
+<!-- Extended data for the box title -->
+{% block box_title %}
+Emotional Analysis Calendar
+{% endblock %}
+
+<!-- Extended data for the top body portion -->
+{% block top %}
+<div id="cal">
+        <div class="header">
+            <span class="left hook"></span>
+            <span class="right hook"></span>
+            <span class="left button" id="prev"><a class="arrow" href={{ prev }}>&lang;</a></span>
+            <span class="right button" id="next"><a class="arrow" href={{ next }}>&rang;</a></span>
+            <div id="headerContent">
+                <span class="month-year" id="label">{{ monthstr }} 20{{ yearstr }}</span><!--dynamically add month and year here-->
+            </div>
+        </div>
+        <table id="days">
+            <td>sun</td>
+            <td>mon</td>
+            <td>tue</td>
+            <td>wed</td>
+            <td>thu</td>
+            <td>fri</td>
+            <td>sat</td>
+        </table>
+        <div id="cal-frame">
+            <table class="curr">
+                <tbody id="calBody"><!--dynamically add the class date, and figure out the starting day of the the loop months days(usearray)-->
+                <tr>
+                    {% for i in fstDayOfMonth%}
+                        <td class="nil"  ></td>
+                    {% endfor %}
+                    {% for i in leftOver %}
+                            <td class="day" >
+                                {{ i }}
+                                happy face !
+                            </td>
+                    {% endfor %}
+                </tr>
+                    {% for day in daysInMonth %}
+                        {% if day == startingPoints.0 or day == startingPoints.1 or day == startingPoints.2 or day == startingPoints.3%}
+                            <tr>
+                                <td class="day">
+                                    {{ day }}
+                                    happy face !
+                                </td>
+                        {% elif day == endingPoints.0 or day == endingPoints.1 or day == endingPoints.2 or day == endingPoints.3%}
+                                <td class="day" >
+                                    {{ day }}
+                                    happy face !
+                                </td>
+                            </tr>
+                        {% else  %}
+                                <td class="day" >
+                                    {{ day }}
+                                    happy face !
+                                </td>
+                        {% endif %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+            <div id="popup_box">
+                <form action={{ actionUrl }} method="post">
+                    {% csrf_token %}
+                        <table id="form_table">
+                            {{ form.as_table }}
+                        </table>
+                    <input type="submit" value="Submit" />
+                </form>
+                <a id="popupBoxClose">Close</a>
+            </div>
+    </div>
+{% endblock %}
+
+<!-- Extended data for the medium body portion -->
+{% block middle %}
+{% endblock %}
+
+<!-- Extended data for the bottom body portion -->
+{% block bottom %}
+{% endblock %}
+
+<!-- Extended data for the footer -->
+{% block footer %}
+{% endblock %}
