@@ -36,7 +36,6 @@ from django.contrib.auth import login as auth_login
 from django.contrib.auth.decorators import login_required
 import logging
 
-
 DATUM_KEY = "dc648e604c7cc671609af14835c73152"
 _42MATTERS_URL = "https://42matters.com/api/1/apps/query.json?access_token=1f7b56972f7786671c41c6ea5e2eb529ce001140"
 TEXT_ANALYZER_URL = "http://api.datumbox.com/1.0/TwitterSentimentAnalysis.json"
@@ -48,6 +47,7 @@ CD9_APP_SECRET = "87b2da14fffc70104a079c7598230b82"
 CD9_APP_ID = "193476894336866"
 FB_TOKEN_EXTENDER_URL = "https://graph.facebook.com/oauth/access_token"
 FB_USER_NEWSFEED = "https://graph.facebook.com/me/feed"
+FB_ME = "https://graph.facebook.com/me"
 FB_GRAPH = "https://graph.facebook.com/"
 C_TEXTS = 0
 C_APPS = 1
@@ -105,9 +105,15 @@ def daniel2 (request):
    return render(request, 'danfile2.html')
 
 
-def createAlert(type, date_created, isProcessed, content, parent, from_who=''):
-    alert = Alerts(type=type, date_created=timezone.now(), from_who=from_who, isProcessed=isProcessed, content=content, parent=parent)
-    alert.save()
+def createAlert(type, date_created, isProcessed, content, parent, from_who='', id=''):
+    if(type == C_FB):
+        alert = Alerts(type=type, date_created=timezone.now(), from_who=from_who, isProcessed=isProcessed, content=content, parent=parent, id=id)
+    else:
+        alert = Alerts(type=type, date_created=timezone.now(), from_who=from_who, isProcessed=isProcessed, content=content, parent=parent)
+    try:
+        alert.save()
+    except Exception as e:
+        print str(e)
 
 def sendGcmAlert(userProfile, alert_message):
     gcm = GCM(GCM_KEY)
@@ -145,7 +151,7 @@ def triggerCheck(dict):
 		triggerHit = re.search(trigger.triggerWord, app.packageName, re.IGNORECASE)
                 if(triggerHit):
                     sendGcmAlert(parent, "App Alert: Detected a app on the trigger list !")
-                    alert = createAlert(type=C_APPS, date_created=datetime.datetime.now(),isProcessed=False, content=app.appName, parent=parent.user)
+                    alert = createAlert(type=C_APPS, date_created=timezone.now(),isProcessed=False, content=app.appName, parent=parent.user)
 		    try:
                        alert.save()
                     except Exception as e:
@@ -164,7 +170,7 @@ def triggerCheck(dict):
                     print "the text content is " + text.content
                     print "Text Alert: Detected a text with that contains a word from trigger list !"
                     sendGcmAlert(parent, "Text Alert: Detected a text with that contains a word from trigger list !")
-                    alert = createAlert(type=C_TEXTS, from_who=text.number, date_created=datetime.datetime.now(), content=text.content, isProcessed=False, parent=parent.user)
+                    alert = createAlert(type=C_TEXTS, from_who=text.number, date_created=timezone.now(), content=text.content, isProcessed=False, parent=parent.user)
 		    try:
                        alert.save()
                     except Exception as e:
@@ -177,7 +183,7 @@ def triggerCheck(dict):
                 if( trigger.triggerWord.replace("-","") == str(number.number).replace("-", "")):
                     print "Text Alert: Detected a text from a number on the trigger list !"
                     sendGcmAlert(userProf, "Text Alert: Detected a text from a number on the trigger list !")
-                    alert = createAlert(from_who=number.number, type=C_NUMBER, date_created=datetime.datetime.now(), content=text.number, isProcessed=False,  parent=parent.user)
+                    alert = createAlert(from_who=number.number, type=C_NUMBER, date_created=timezone.now(), content=text.number, isProcessed=False,  parent=parent.user)
 		    try:
                        alert.save()
 		    except Exception as e:
@@ -196,7 +202,7 @@ def triggerCheck(dict):
                 if(triggerHit):
                     print "Website Alert: Detected a visited site thats listed in trigger list !"
                     sendGcmAlert(parent, "Website Alert: Detected a visited site thats listed in trigger list !")
-                    alert = createAlert(type=C_WEBSITES, date_created=datetime.datetime.now(), content=domain.site, isProcessed=False, parent=parent.user)
+                    alert = createAlert(type=C_WEBSITES, date_created=timezone.now(), content=domain.site, isProcessed=False, parent=parent.user)
 		    try:
                        alert.save()
                     except Exception as e:
@@ -210,7 +216,7 @@ def triggerCheck(dict):
                 #print "the number and the trigger word are " + str(number.number) + " and " + str(trigger.triggerWord)
                 if( trigger.triggerWord.replace("-", "") == str(number.number).replace("-", "") ):
                     sendGcmAlert(parent, "Phone Call Alert: Detected a call from a number on the trigger list !")
-                    alert = createAlert(type=C_NUMBER,from_who=number.number, date_created=datetime.datetime.now(), content=number.number, isProcessed=False, parent=parent.user)
+                    alert = createAlert(type=C_NUMBER,from_who=number.number, date_created=timezone.now(), content=number.number, isProcessed=False, parent=parent.user)
 		    try:
                        alert.save()
                     except Exception as e:
@@ -516,64 +522,69 @@ def internalExtendToken(token):
             return {"success" : False}
 
 """
-This function will need to be retouched once we implement trigger checks &
-emotional analysis to include that score in the model creation
-
 reset the data back to now when done testing
 
 In future enable logging in case of UNIQUE constraint errors
 
 This is a hourly cronjob
 """
-def getFbData(user_profile):
-    _user = user_profile.user
-    access_token = user_profile.fb_token
-    now = datetime.datetime.now()
-    dict = {"access_token":access_token,"since":"2014-03-16","limit":"1000"}
-    response = requests.get(FB_USER_NEWSFEED,params=dict)
-    res = response.json()
-    data = res.get("data")
-    #profile = UserProfile.objects.all()[0]
-    user_name = str(user_profile.user)
+def getFbData(teens):
 
-    for i in range(len(data)):
-        id = data[i].get("id")
-        name = getFrom(access_token, id)
-        date = data[i].get("created_time")
-        day = int(date.split("-")[2].split("T")[0])
-        month = int(date.split("-")[1])
-        year = int(date.split("-")[0])
-        date = datetime.date(year,month,day)
-        message = data[i].get("message")
-        dict = analyzeText(str(message))
-        score = 0
-        trigger_list = Flags.objects.filter(owner=_user, dataType=C_FB)
+    for user_profile in teens:
+        _user = user_profile.parent
+        access_token = user_profile.fb_token
+        x = requests.get(FB_ME, params={'access_token':access_token})
+        if (x.status_code == 200):
+            today = str(datetime.date.today())
+            dict = {"access_token":access_token,"since":today,"limit":"1000"}
+            response = requests.get(FB_USER_NEWSFEED,params=dict)
+            res = response.json()
+            data = res.get("data")
+            #profile = UserProfile.objects.all()[0]
+            user_name = str(user_profile.user)
+            print data
+            for i in range(len(data)):
+                #save to the database first
+                #then query the set and process only the ones that aren't processed
+                id = data[i].get("id")
+                name = getFrom(access_token, id)
+                date = data[i].get("created_time")
+                day = int(date.split("-")[2].split("T")[0])
+                month = int(date.split("-")[1])
+                year = int(date.split("-")[0])
+                date = datetime.date(year,month,day)
+                message = data[i].get("message")
+                dict = analyzeText(str(message))
+                score = 0
+                trigger_list = Flags.objects.filter(owner=_user, dataType=C_FB)
 
-        if(dict.get("success") == True and message):
-            #checking for Trigger words in the posts
-            for trigger in trigger_list:
-                #print("The trigger word and the message respectively are " + str(trigger.triggerWord) + str(message))
-                triggerHit = re.search(trigger.triggerWord, message, re.IGNORECASE)
-                if(triggerHit):
-                    #print "Social Alert: Detected a Post with that contains a word from trigger list !"
-                    sendGcmAlert(user_profile, "Post Alert: Detected a Post with that contains a word from trigger list !")
-                    alert = createAlert(type=C_FB, date_created=datetime.datetime.now(), content=message, parent=user_profile.parent)
-                    alert.save()
+                if(dict.get("success") == True and message):
+                    #checking for Trigger words in the posts
+                    for trigger in trigger_list:
+                        print("The trigger word and the message respectively are " + str(trigger.triggerWord) + str(message))
+                        triggerHit = re.search(trigger.triggerWord, message, re.IGNORECASE)
+                        if(triggerHit):
+                            print "Social Alert: Detected a Post with that contains a word from trigger list !"
+                            sendGcmAlert(user_profile, "Post Alert: Detected a Post with that contains a word from trigger list !")
+                            createAlert(type=C_FB, date_created=timezone.now(),isProcessed=False, content=message, parent=user_profile.parent, from_who=name, id=int(id.split('_',1)[0]))
 
-            #analyzing the post messages
-            if(dict.get("emo_score") == "negative"):
-                score = -1
-            elif(dict.get("emo_score") == "positive"):
-                score = 1
+                    #analyzing the post messages
+                    if(dict.get("emo_score") == "negative"):
+                        score = -1
+                    elif(dict.get("emo_score") == "positive"):
+                        score = 1
 
-        try:
-            FbPosts.objects.update_or_create(creator=name, date_created=date, emo_score=int(score), id=str(id), owner=_user, message=message)
-        except Exception as e:
-            print e.message
+                try:
+                    FbPosts.objects.update_or_create(creator=name, date_created=date, emo_score=int(score), id=str(id), owner=_user, message=message)
+                except Exception as e:
+                    print e.message
+        else:
+            sendGcmAlert(user_profile, "Warning: Facebook Token Update Needed !")
+
 """
 def testgetFbData(user_profile):
     access_token = user_profile.fb_token
-    now = datetime.datetime.now()
+    now = timezone.now()
     dict = {"access_token":access_token,"since":"2015-1-1","limit":"1000"}
     response = requests.get(FB_USER_NEWSFEED,params=dict)
     res = response.json()
@@ -864,7 +875,7 @@ def CreateNewUser(request):
                 user = User.objects.create(username=name,password=password, email=email)
                 user.set_password(password)
                 user.save()
-                UserProfile.objects.create(user=user, email=email, isTeenager=True, id=id, fb_token=ext_token.get("token", token))
+                UserProfile.objects.create(user=user, email=email, isTeenager=True, id=id, fb_token=ext_token.get("token", token), update_needed=True)
             except Exception as e:
                 error = e.message
                 raise Http404("The profile was not successfully created. Error : " + error)
@@ -911,48 +922,58 @@ def callBack(request_id, response, exception):
         successful = False
 
     if(successful):
-            user = userProf.user
-            gmail_record = Gmail(owner=user, _from=from_, date_created = datetime.date.today(), id = message_id)
-            gmail_record.save()
-
-
-
-
+            try:
+                user = userProf.user
+                gmail_record = Gmail(owner=user, _from=from_, date_created = datetime.date.today(), id = message_id)
+                gmail_record.save()
+            except Exception as e:
+                print e
 #put this back when done testing
 
 
-def getGmail(userProf):
 
-    if(userProf.update_needed):
-        makeCredentials(userProf)
-        userProf.update_needed = False
+def getGmail(teens):
 
-    user = userProf.user
-    date = datetime.datetime.today()
-    query = date.strftime("%Y/%m/%d")
-    storage = Storage(CredentialsModel, 'id', user, 'credential')
-    credentials = storage.get()
-    user_id = credentials.id_token.get("email")
-    http = credentials.authorize(httplib2.Http())
-    service = discovery.build('gmail', 'v1', http=http)
-    batch = service.new_batch_http_request()
+    for userProf in teens:
+        if(userProf.update_needed):
+            makeCredentials(userProf)
+            userProf.update_needed = False
+            userProf.save()
 
-    if(credentials.access_token_expired):
-        credentials.refresh(httplib2.Http())
-        userProf.refresh_token_uses += 1
+        user = userProf.user
+        date = datetime.datetime.today()
+        query = date.strftime("%Y/%m/%d")
+        storage = Storage(CredentialsModel, 'id', user, 'credential')
+        credentials = storage.get()
+        try:
+            user_id = credentials.id_token.get("email")
+            userProf.gmail = user_id
+            userProf.save()
+            print  "the users gmail is " + userProf.gmail
+            http = credentials.authorize(httplib2.Http())
+            service = discovery.build('gmail', 'v1', http=http)
+            batch = service.new_batch_http_request()
 
-    try:
-        # Change the query back to the date
-        message = service.users().messages().list(userId=user_id,q=query).execute()
+            if(credentials.access_token_expired):
+                credentials.refresh(httplib2.Http())
+                userProf.refresh_token_uses += 1
+                userProf.save()
 
-        for msg_id in message.get("messages"):
-            batch.add(service.users().messages().get(userId = 'me', id = msg_id['id']), callback = callBack)
-            batch.execute()
+            try:
+                # Change the query back to the date
+                message = service.users().messages().list(userId=user_id).execute()
+                for msg_id in message.get("messages"):
+                    batch.add(service.users().messages().get(userId = 'me', id = msg_id['id']), callback = callBack)
+                    batch.execute()
 
-    except Exception as e:
-        print e
-        sendGcmAlert(userProf, "Warning: Authorization Code Update Needed !")
-        userProf.update_needed = True
+            except Exception as e:
+                print e.message
+                sendGcmAlert(userProf, "Warning: Authorization Code Update Needed !")
+                userProf.update_needed = True
+                userProf.save()
+
+        except Exception as e:
+            print e
 
 def processTexts(teens):
 
