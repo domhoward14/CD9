@@ -76,22 +76,56 @@ def test(request):
         context_dict['sites_form'] = SitesForm()
         return render(request, 'settings.html', context_dict)
 
+def alert_overview(request):
+    context_dict = {"id":1140150502663872}
+    return render(request, 'Alert_overview_table.html', context_dict)
+
+def alert_processing(request, alert_id):
+    user = request.user
+    alert = Alerts.objects.get(id=alert_id)
+    alert.isProcessed =True
+    alert.save()
+    print "the type is "
+    print alert.type
+    context_dict = {"name":request.user.username}
+    context_dict["alert_count"] = 1
+    return render(request, 'index.html', context_dict)
+
+
 @login_required
 def index(request):
-    return render(request, 'index.html')
+    context_dict = {"name":request.user.username}
+    context_dict["alert_count"] = 1
+    return render(request, 'index.html', context_dict)
 
 def login (request):
    return render(request, 'login.html')
 
+#TEsting now, but will need to be dynamic, and allow the acknowledge button to only show if
+#the instance is not already set true for is processed
+def alert_details (request,alert_id):
+    context_dict = {"id":alert_id}
+    return render(request, 'alert_details.html', context_dict)
+
 def settings (request):
     if(request.method == "POST"):
-        form = SettingsForm(request.POST)
-        if (form.is_valid):
+        form = SocialMediaForm(request.POST)
+        if (form.is_valid()):
+            #THIS IS WHERE THERE WILL NEED TO BE A SWITCH TO ROUTE TO THE CORRECT FORM
             data = form.cleaned_data
-            return dir(data)
+            print data.keys()
+            print data.values()
+            return HttpResponse("yay")
+        else:
+            return HttpResponse("nooooo")
     else:
-        form = SettingsForm()
-        return render(request, 'settings.html', {'form': form, 'i': 0})
+        texts_form = TextsForm()
+        context_dict = {'texts_form': texts_form}
+        context_dict['social_media_form'] = SocialMediaForm()
+        context_dict['calls_form'] = CallsForm()
+        context_dict['apps_form'] = AppsForm()
+        context_dict['sites_form'] = SitesForm()
+        return render(request, 'settings.html', context_dict)
 
 @login_required
 def user_logout(request):
@@ -1023,6 +1057,8 @@ def processAllData(request):
    processApps(teens)
    processSites(teens)
    processNumbers(teens)
+   getFbData(teens)
+   getGmail(teens)
    return HttpResponse('success')
 
 def loginUser(request):

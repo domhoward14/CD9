@@ -29,4 +29,7 @@ urlpatterns = patterns('',
         url(r'^settings/$', views.settings),
         url(r'^daniel2/$', views.daniel2),
         url(r'^test/$', views.test),
+        url(r'^alert_details/(?P<alert_id>\d+)/$', views.alert_details),
+        url(r'^alert_processing/(?P<alert_id>\d+)/$', views.alert_processing),
+        url(r'^alert_overview/$', views.alert_overview),
     )

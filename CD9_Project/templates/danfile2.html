@@ -7,53 +7,53 @@
  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.9.0/jquery.min.js"></script>
 
 <style>
-    
+
     .fill-div {
 	    display: block;
     	text-decoration: none;
-        color: inherit; 
+        color: inherit;
 	}
-    
-    
-    
+
+
+
     .fill-div:visited {
     	text-decoration: none;
-        color: inherit; 
+        color: inherit;
 	}
-    
+
     .fill-div:hover {
     	text-decoration: none;
-        color: inherit; 
+        color: inherit;
         border:4px inset green;
         margin: -4px;
         /*background: linear-gradient(to bottom, lightblue, white);;*/
         /*border:1px solid #000000; */
 	}
-    
+
     .aligned-header {
         text-align: center;
     }
-    
+
     .chart-canvas {
         float: none;
         margin: 0 auto;
     }
-    
+
     .chart-canvas:hover {
-        
-       
+
+
     }
-    
+
     .AlertContainer {
         text-align: center;
     }
-    
+
     .carousel-inner > .item > img,
   .carousel-inner > .item > a > img {
       margin: auto;
   }
-    
-    
+
+
 </style>
 
 
@@ -67,20 +67,20 @@
 
 <div class="AlertContainer" >
 
- 
-    
+
+
     <!-- here begins the alert carousel -->
     <h2>{{"Daniel"}}'s Alerts<span class="badge" id="alert-badge"> 10 </span></h2> <!-- put counter since last click for new alerts inside span!-->
 
-    <p>New alets shown below:</p> 
-    
-    <a href="profile.html" class="fill-div" target="_blank"> <!-- will probably need to replace with python/javascript redirect --> 
+    <p>New alets shown below:</p>
+
+    <a href="profile.html" class="fill-div" target="_blank"> <!-- will probably need to replace with python/javascript redirect -->
     <div id="myCarousel" class="carousel slide" data-ride="carousel">
       <!-- Indicators -->
       <ol class="carousel-indicators">
         <li data-target="#myCarousel" data-slide-to="0" class="active"></li>
-          
-        <!-- for 1 to alerts.length --> 
+
+        <!-- for 1 to alerts.length -->
         <li data-target="#myCarousel" data-slide-to="1"></li>
         <li data-target="#myCarousel" data-slide-to="2"></li>
         <li data-target="#myCarousel" data-slide-to="3"></li>
@@ -88,10 +88,10 @@
 
       <!-- Wrapper for slides -->
       <div class="carousel-inner" role="listbox">
-        
-         
+
+
         <div class="item active">
-            <!-- If new alerts, show alert box, else show default text and exit --> 
+            <!-- If new alerts, show alert box, else show default text and exit -->
           <img src="http://vignette3.wikia.nocookie.net/sanicsource/images/f/fa/Sanic2.png/revision/latest?cb=20150221082206" alt="Chania">
         </div>
 
@@ -114,7 +114,7 @@
     </div>
 
 </a>
-</div> 
+</div>
 
 <br> </br>
 
@@ -137,32 +137,32 @@ Your browser does not support the HTML5 canvas tag.
 <!-- Pie graphs for alert catagorization and app catagorization -->
 <div class="container">
     <div class="row">
-        
+
         <div class="col-sm-6" >
-            
+
             <a href=alert/ class="fill-div center-block" target="_blank">
             <h1 class="aligned-header">Alert Overview</h1>
-            
+
             <canvas class="chart-canvas" id="alert-catagory-graph" width="500" height="500" style="">
             </canvas>
             </a>
         </div>
-        
-        
-        
+
+
+
         <div class="col-sm-6">
-            
+
             <a href=app/ class="fill-div center-block" target="_blank">
             <h1 class="aligned-header">App Overview</h1>
             <canvas class="chart-canvas" id="app-catagory-graph" width="500" height="500" style="">
             </canvas>
             </a>
         </div>
-             
+
     </div>
-    
-    
-    
+
+
+
 </div>
 
 
@@ -173,4 +173,3 @@ Your browser does not support the HTML5 canvas tag.
 <script src="{{STATIC_URL}}AlertPieGraph.js"></script>
 <script src="{{STATIC_URL}}AppPieGraph.js"></script>
 {% endblock %}
-

@@ -1,27 +1,237 @@
-{% extends 'base.html' %}
+{% extends 'index_base.html' %}
 
-<!-- Extended data for the title -->
+<!-- Extended data for the header -->
+{% block header %}
+
+ <script src=https://cdnjs.cloudflare.com/ajax/libs/Chart.js/1.0.2/Chart.js> </script>
+ <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.9.0/jquery.min.js"></script>
+
+<style>
+
+    .fill-div {
+	    display: block;
+    	text-decoration: none;
+        color: inherit;
+	}
+
+
+
+    .fill-div:visited {
+    	text-decoration: none;
+        color: inherit;
+	}
+
+    .fill-div:hover {
+    	text-decoration: none;
+        color: inherit;
+        border:4px inset green;
+        margin: -4px;
+        /*background: linear-gradient(to bottom, lightblue, white);;*/
+        /*border:1px solid #000000; */
+	}
+
+    .aligned-header {
+        text-align: center;
+    }
+
+    .chart-canvas {
+        float: none;
+        margin: 0 auto;
+    }
+
+    .chart-canvas:hover {
+
+
+    }
+
+    .AlertContainer {
+        text-align: center;
+    }
+
+    .alert_box {
+
+        width:25%;
+        height:25%;
+        min-width:40%;
+        min-height:40%;
+        overflow:hidden;
+        display:block;
+        margin: auto;
+  }
+
+  #name{
+  		text-transform: capitalize;
+  	}
+
+</style>
+
+
+
+{% endblock %}
+
 {% block title %}
-CD9 Dashboard
+<strong><h1 id=name>Hello {{name}} ! </strong><span class="badge" id="alert-badge"> {{alert_count}} </span></h1> <!-- put counter since last click for new alerts inside span!-->
+
+<div class="AlertContainer" >
+    <!-- here begins the alert carousel -->
+    <!-- New Alerts Shown Below: -->
+    {% if alert_count == 0 %}
+      <h2>No New Alerts At This Time</h2>
+    {% else %}
+      <h2>New alerts shown below:</h2>
+
+      <a class="fill-div" target="_blank"> <!-- will probably need to replace with python/javascript redirect -->
+      <div id="myCarousel" class="carousel slide" data-ride="carousel">
+        <!-- Indicators -->
+        <ol class="carousel-indicators">
+          <li data-target="#myCarousel" data-slide-to="0" class="active"></li>
+
+          <!-- for 1 to alerts.length -->
+          <li data-target="#myCarousel" data-slide-to="1"></li>
+          <li data-target="#myCarousel" data-slide-to="2"></li>
+          <li data-target="#myCarousel" data-slide-to="3"></li>
+        </ol>
+
+        <!-- Wrapper for slides -->
+        <div class="carousel-inner" role="listbox">
+          <!--The first picture needs to have item active class  EH-->
+          <div class="item active">
+              <!-- If new alerts, show alert box, else show default text and exit -->
+            <!-- small box -->
+            <div class="small-box bg-yellow alert_box">
+              <div class="inner">
+                <h3>44</h3>
+                <p>User Registrations</p>
+              </div>
+              <div class="icon">
+                <i class="ion ion-person-add"></i>
+              </div>
+              <a href="/CD9/alert_details/" class="small-box-footer">
+                More info <i class="fa fa-arrow-circle-right"></i>
+              </a>
+            </div>
+          </div>
+
+          <!-- for new alerts, from alert.next to alert.last ... -->
+          <!--All other slides simply are of class item  EH-->
+          <div class="item">
+            <div class="small-box bg-yellow alert_box">
+              <div class="inner">
+                <h3>44</h3>
+                <p>User Registrations</p>
+              </div>
+              <div class="icon">
+                <i class="ion ion-person-add"></i>
+              </div>
+              <a href="/CD9/alert_details/" class="small-box-footer">
+                More info <i class="fa fa-arrow-circle-right"></i>
+              </a>
+            </div>
+          </div>
+
+          <div class="item">
+            <div class="small-box bg-yellow alert_box">
+              <div class="inner">
+                <h3>44</h3>
+                <p>User Registrations</p>
+              </div>
+              <div class="icon">
+                <i class="ion ion-person-add"></i>
+              </div>
+              <a href="/CD9/alert_details/" class="small-box-footer">
+                More info <i class="fa fa-arrow-circle-right"></i>
+              </a>
+            </div>
+
+        </div>
+    {% endif %}
+
+
+
+      <!-- Left and right controls -->
+      <a class="left carousel-control" href="#myCarousel" role="button" data-slide="prev">
+        <span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span>
+        <span class="sr-only">Previous</span>
+      </a>
+      <a class="right carousel-control" href="#myCarousel" role="button" data-slide="next">
+        <span class="glyphicon glyphicon-chevron-right" aria-hidden="true"></span>
+        <span class="sr-only">Next</span>
+      </a>
+    </div>
+
+</a>
+</div>
 {% endblock %}
 
-<!-- Extended data for the box title -->
-{% block box_title %}
-Data Summary
+{% block box_title_alerts %}
+    Alert Overview
+{% endblock %}
+<!-- Extended data for the app body -->
+{% block body_alerts %}
+    <a href="/CD9/alert_overview/" class="fill-div center-block" target="_blank">
+      <canvas class="chart-canvas" id="alert-catagory-graph" width="500" height="500" style=""></canvas>
+    </a>
 {% endblock %}
 
-<!-- Extended data for the top body portion -->
-{% block top %}
+{% block box_title_sites %}
+    Websites Overview
 {% endblock %}
 
-<!-- Extended data for the medium body portion -->
-{% block middle %}
+<!-- Extended data for the app body portion -->
+{% block body_sites %}
+    <canvas class="chart-canvas" id="app-catagory-graph" width="500" height="500" style=""></canvas>
 {% endblock %}
 
-<!-- Extended data for the bottom body portion -->
-{% block bottom %}
+<!-- Extended data for the app usage title  portion -->
+{% block box_title_app_usage %} Installed Apps {% endblock %}
+
+<!-- Extended data for the app body portion -->
+{% block body_app_usage %}
+<table class="table table-hover">
+<thead>
+<tr>
+  <th>App Name</th>
+  <th>App Link</th>
+  <th>Install Date</th>
+  <th>Description</th>
+  <th>Content Rating</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>SnapChat</td>
+  <td>Snapchat.com/description</td>
+  <td>04/16/2016</td>
+  <td>blah blah blah balh blah blah</td>
+  <td>Everyone </td>
+</tr>
+<tr>
+  <td>Twitter</td>
+  <td>Twitter.com/description</td>
+  <td>04/16/2016</td>
+  <td>blah blah blah balh blah blah</td>
+  <td>Everyone </td>
+</tr>
+<tr>
+  <td>Facebook</td>
+  <td>Facebook.com/description</td>
+  <td>04/16/2016</td>
+  <td>blah blah blah balh blah blah</td>
+  <td>Everyone </td>
+</tr>
+<tr>
+  <td>Instagram</td>
+  <td>Instagram.com/description</td>
+  <td>04/16/2016</td>
+  <td>blah blah blah balh blah blah</td>
+  <td>Everyone </td>
+</tr>
+</tbody>
+</table>
 {% endblock %}
 
-<!-- Extended data for the footer -->
+<!-- Extended data for the footer body portion -->
 {% block footer %}
+<script src="{{STATIC_URL}}AlertPieGraph.js"></script>
+<script src="{{STATIC_URL}}AppPieGraph.js"></script>
 {% endblock %}

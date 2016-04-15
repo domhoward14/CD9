@@ -202,45 +202,43 @@
 
         <!-- Main content -->
         <section class="content">
+          <div class="row">
+              <div class="col-md-6">
+                <!-- DIRECT CHAT -->
+                <div class="box ">
+                  <div class="box-header with-border">
+                    <h3 class="box-title aligned-header">{% block box_title_alerts %} {% endblock %}</h3>
+                  </div><!-- /.box-header -->
+                  <div class="box-body">
+                      {% block body_alerts %}{% endblock  %}
+                  </div><!-- /.box-body -->
+                </div><!--/.direct-chat -->
+              </div><!-- /.col -->
+              <div class="col-md-6">
+                <div class="box ">
+                  <div class="box-header with-border">
+                    <h3 class="box-title aligned-header">{% block box_title_sites %} {% endblock %}</h3>
+                  </div><!-- /.box-header -->
+                  <div class="box-body">
+                      {% block body_sites %}{% endblock  %}
+                  </div><!-- /.box-body -->
+                </div><!--/.direct-chat -->
+              </div><!-- /.col -->
 
-          <!-- Default box -->
-          <div class="box">
-            <div class="box-header with-border">
-              <h3 class="box-title">{% block box_title %}{% endblock %}</h3>
-              <div class="box-tools pull-right">
-                <button class="btn btn-box-tool" data-widget="collapse" data-toggle="tooltip" title="Collapse"><i class="fa fa-minus"></i></button>
-                <button class="btn btn-box-tool" data-widget="remove" data-toggle="tooltip" title="Remove"><i class="fa fa-times"></i></button>
-              </div>
-            </div>
-            <div class="box-body">
-              <!-- Extended data for the body -->
-              {% block top %}
+              <div class="col-md-12">
+                <div class="box ">
+                  <div class="box-header with-border">
+                    <h3 class="box-title aligned-header">{% block box_title_app_usage %} {% endblock %}</h3>
+                  </div><!-- /.box-header -->
+                  <div class="box-body">
+                      {% block body_app_usage %}{% endblock  %}
+                  </div><!-- /.box-body -->
+                </div><!--/.direct-chat -->
+              </div><!-- /.col -->
 
-              {% endblock %}
-
-              {% block medium %}
-
-              {% endblock %}
-
-              {% block bottom %}
-
-              {% endblock %}
-            </div><!-- /.box-body -->
-            <div class="box-footer">
-              <!-- Extended data for the footer -->
-              {% block footer %}{% endblock %}
-            </div><!-- /.box-footer-->
-          </div><!-- /.box -->
-
+            </div><!-- /.row -->
         </section><!-- /.content -->
       </div><!-- /.content-wrapper -->
-
-      <footer class="main-footer">
-        <div class="pull-right hidden-xs">
-          <b>Version</b> 2.3.0
-        </div>
-        <strong>Copyright &copy; 2014-2015 <a href="http://almsaeedstudio.com">Almsaeed Studio</a>.</strong> All rights reserved.
-      </footer>
 
       <!-- Control Sidebar -->
       <aside class="control-sidebar control-sidebar-dark">
@@ -422,5 +420,6 @@
     <script src="{{STATIC_URL}}dist/js/app.min.js"></script>
     <!-- AdminLTE for demo purposes -->
     <script src="{{STATIC_URL}}dist/js/demo.js"></script>
+    {% block footer %}{% endblock  %}
   </body>
 </html>

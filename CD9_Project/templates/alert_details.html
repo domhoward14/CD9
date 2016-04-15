@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+
+<!-- Extended data for the title -->
+{% block title %}
+<strong>Alert Details</strong>
+{% endblock %}
+
+<!-- Extended data for the box title -->
+{% block box_title %}
+{% endblock %}
+
+<!-- Extended data for the top body portion -->
+{% block top %}
+<div class="col-sm-12">
+  <form action="/CD9/alert_processing/{{ id }}">
+      <table class="table table-hover">
+    <thead>
+      <tr>
+        <th>Type Of Alert</th>
+        <th>Date Created</th>
+        <th>Content</th>
+        <th>From</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>New App !</td>
+        <td>04/16/2016</td>
+        <td>Snap Chat Was Installed !</td>
+        <td>N/A</td>
+      </tr>
+    </tbody>
+    </table>
+      <input type="submit" class="btn btn-primary" value="Acknowledge">
+</form>
+</div>
+</div>
+{% endblock %}
+
+<!-- Extended data for the medium body portion -->
+{% block middle %}
+{% endblock %}
+
+<!-- Extended data for the bottom body portion -->
+{% block bottom %}
+{% endblock %}
+
+<!-- Extended data for the footer -->
+{% block footer %}
+{% endblock %}
