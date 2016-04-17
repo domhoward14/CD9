@@ -11,8 +11,10 @@
 
 <!-- Extended data for the top body portion -->
 {% block top %}
+
 <div class="col-sm-12">
-  <form action="/CD9/alert_processing/{{ id }}">
+  <form method ="post" action="/CD9/alert_details/{{ alert.id }}/">
+    {% csrf_token %}
       <table class="table table-hover">
     <thead>
       <tr>
@@ -20,14 +22,16 @@
         <th>Date Created</th>
         <th>Content</th>
         <th>From</th>
+        <th>Acknowledged</th>
       </tr>
     </thead>
     <tbody>
       <tr>
-        <td>New App !</td>
-        <td>04/16/2016</td>
-        <td>Snap Chat Was Installed !</td>
-        <td>N/A</td>
+        <td>{{alert.alert_string}}</td>
+        <td>{{alert.date_created}}</td>
+        <td>{{alert.content}}</td>
+        <td>{{alert.from_who}}</td>
+        <td>{{alert.isProcessed}}</td>
       </tr>
     </tbody>
     </table>

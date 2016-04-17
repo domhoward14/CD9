@@ -3,7 +3,7 @@ import httplib2
 import json
 import random
 from string import digits, ascii_uppercase, ascii_lowercase
-import datetime
+import datetime, calendar, string
 from django.contrib.auth.models import User
 from django.shortcuts import render
 from django.http import HttpResponse, JsonResponse
@@ -77,7 +77,10 @@ def test(request):
         return render(request, 'settings.html', context_dict)
 
 def alert_overview(request):
-    context_dict = {"id":1140150502663872}
+    parent = request.user.id
+    teen = UserProfile.objects.filter(parent=parent)[0]
+    context_dict = {'all_alerts': Alerts.objects.filter(teen=teen)}
+    context_dict["teen"] = teen
     return render(request, 'Alert_overview_table.html', context_dict)
 
 def alert_processing(request, alert_id):
@@ -91,12 +94,55 @@ def alert_processing(request, alert_id):
     context_dict["alert_count"] = 1
     return render(request, 'index.html', context_dict)
 
-
 @login_required
 def index(request):
-    context_dict = {"name":request.user.username}
-    context_dict["alert_count"] = 1
+    context_dict = addCalendar()
+    context_dict["name"] = request.user.username
+    parent = request.user
+    teen = UserProfile.objects.filter(parent=parent)[0]
+    context_dict["teen"] = teen
+    alert_list = Alerts.objects.filter(teen=teen, isProcessed=False)
+    context_dict["alert_count"] = len(alert_list)
+    if(context_dict["alert_count"] > 1):
+        context_dict["alert_list"] = alert_list[1:]
+        context_dict["first_alert"] = alert_list[:1][0]
+    elif(context_dict["alert_count"] == 1) :
+        context_dict["first_alert"] = alert_list[0]
+        context_dict["alert_list"] = alert_list
+    context_dict["alert_range"] = range(context_dict["alert_count"] + 1)[1:]
     return render(request, 'index.html', context_dict)
+
+def total_interactions(request):
+    context_dict = {"name":request.user.username}
+    parent = request.user
+    teen = UserProfile.objects.filter(parent=parent)[0]
+    context_dict["teen"] = teen
+    return render(request, 'total_interactions.html', context_dict)
+
+def addCalendar():
+    currentDay = datetime.date.today().strftime("%d")
+    year = int(datetime.date.today().strftime("%y"))
+    monthNumber = datetime.date.today().strftime("%m")
+    month = getMonthProperties(monthNumber,year)[2]
+    nextAddress = "/CD9/Calendar/"+str((int(monthNumber) + 1))+"-"+str(year)
+    prevAddress = "/CD9/Calendar/"+str(int(monthNumber) - 1)+"-"+str(year)
+    fstDayOfMonth = int(calendar.monthrange(year,int(monthNumber))[0])
+    secondWkSp = 7 - fstDayOfMonth
+    daysInMonth = calendar.monthrange(year,int(monthNumber))[1]
+    daysInMonth = range(daysInMonth+1)[secondWkSp:]
+    startingPoints = [secondWkSp, secondWkSp+7, secondWkSp+14, secondWkSp+21]
+    endingPoints = [secondWkSp+6, secondWkSp+13, secondWkSp+20, secondWkSp+27]
+    actionUrl = "/CD9/Calendar/" + str(monthNumber) + "-" + str(year) +"/"
+    context_dictionary = {'monthstr':month, 'yearstr':year, 'currentDay':currentDay, 'fstDayOfMonth':range(fstDayOfMonth+1), 'daysInMonth':daysInMonth}
+    context_dictionary['leftOver'] = range(secondWkSp)[1:]
+    context_dictionary['startingPoints'] = startingPoints
+    context_dictionary['endingPoints'] = endingPoints
+    context_dictionary['next'] = nextAddress
+    context_dictionary['prev'] = prevAddress
+    context_dictionary['actionUrl'] = actionUrl
+    context_dictionary['month'] = monthNumber
+    context_dictionary['year'] = year + 2000
+    return context_dictionary
 
 def login (request):
    return render(request, 'login.html')
@@ -104,8 +150,29 @@ def login (request):
 #TEsting now, but will need to be dynamic, and allow the acknowledge button to only show if
 #the instance is not already set true for is processed
 def alert_details (request,alert_id):
-    context_dict = {"id":alert_id}
-    return render(request, 'alert_details.html', context_dict)
+    if(request.method == "POST"):
+        alert = Alerts.objects.get(id=alert_id)
+        alert.isProcessed = True
+        alert.save()
+        context_dict = addCalendar()
+        context_dict["name"] = request.user.username
+        parent = request.user
+        teen = UserProfile.objects.filter(parent=parent)[0]
+        context_dict["teen"] = teen
+        alert_list = Alerts.objects.filter(teen=teen, isProcessed=False)
+        context_dict["alert_count"] = len(alert_list)
+        if(context_dict["alert_count"] > 1):
+            context_dict["alert_list"] = alert_list[1:]
+            context_dict["first_alert"] = alert_list[:1][0]
+        elif(context_dict["alert_count"] == 1) :
+            context_dict["first_alert"] = alert_list[0]
+            context_dict["alert_list"] = alert_list
+        context_dict["alert_range"] = range(context_dict["alert_count"] + 1)[1:]
+        return render(request, 'index.html', context_dict)
+    else:
+        alert = Alerts.objects.get(id=alert_id)
+        context_dict = {"alert":alert}
+        return render(request, 'alert_details.html', context_dict)
 
 def settings (request):
     if(request.method == "POST"):
@@ -138,12 +205,11 @@ def daniel (request):
 def daniel2 (request):
    return render(request, 'danfile2.html')
 
-
-def createAlert(type, date_created, isProcessed, content, parent, from_who='', id=''):
+def createAlert(color, alert_string, icon, type, date_created, isProcessed, content, teen, from_who='', id=''):
     if(type == C_FB):
-        alert = Alerts(type=type, date_created=timezone.now(), from_who=from_who, isProcessed=isProcessed, content=content, parent=parent, id=id)
+        alert = Alerts(color= color, alert_string=alert_string, icon=icon, type=type, date_created=timezone.now(), from_who=from_who, isProcessed=isProcessed, content=content, teen=teen, id=id)
     else:
-        alert = Alerts(type=type, date_created=timezone.now(), from_who=from_who, isProcessed=isProcessed, content=content, parent=parent)
+        alert = Alerts(color= color, alert_string=alert_string, icon=icon, type=type, date_created=timezone.now(), from_who=from_who, isProcessed=isProcessed, content=content, teen=teen)
     try:
         alert.save()
     except Exception as e:
@@ -185,7 +251,7 @@ def triggerCheck(dict):
 		triggerHit = re.search(trigger.triggerWord, app.packageName, re.IGNORECASE)
                 if(triggerHit):
                     sendGcmAlert(parent, "App Alert: Detected a app on the trigger list !")
-                    alert = createAlert(type=C_APPS, date_created=timezone.now(),isProcessed=False, content=app.appName, parent=parent.user)
+                    alert = createAlert(color= "yellow", alert_string="App Alert !", icon="ion-social-android", type=C_APPS, date_created=timezone.now(),isProcessed=False, content=app.appName, teen=teenProf)
 		    try:
                        alert.save()
                     except Exception as e:
@@ -204,7 +270,7 @@ def triggerCheck(dict):
                     print "the text content is " + text.content
                     print "Text Alert: Detected a text with that contains a word from trigger list !"
                     sendGcmAlert(parent, "Text Alert: Detected a text with that contains a word from trigger list !")
-                    alert = createAlert(type=C_TEXTS, from_who=text.number, date_created=timezone.now(), content=text.content, isProcessed=False, parent=parent.user)
+                    alert = createAlert(color= "red", alert_string="Text Alert !", icon="ion-android-phone-portrait", type=C_TEXTS, from_who=text.number, date_created=timezone.now(), content=text.content, isProcessed=False, teen=teenProf)
 		    try:
                        alert.save()
                     except Exception as e:
@@ -217,7 +283,7 @@ def triggerCheck(dict):
                 if( trigger.triggerWord.replace("-","") == str(number.number).replace("-", "")):
                     print "Text Alert: Detected a text from a number on the trigger list !"
                     sendGcmAlert(userProf, "Text Alert: Detected a text from a number on the trigger list !")
-                    alert = createAlert(from_who=number.number, type=C_NUMBER, date_created=timezone.now(), content=text.number, isProcessed=False,  parent=parent.user)
+                    alert = createAlert(color= "green", alert_string="Number Alert !", icon="ion-android-call", from_who=number.number, type=C_NUMBER, date_created=timezone.now(), content=text.number, isProcessed=False,  teen=teenProf)
 		    try:
                        alert.save()
 		    except Exception as e:
@@ -236,7 +302,7 @@ def triggerCheck(dict):
                 if(triggerHit):
                     print "Website Alert: Detected a visited site thats listed in trigger list !"
                     sendGcmAlert(parent, "Website Alert: Detected a visited site thats listed in trigger list !")
-                    alert = createAlert(type=C_WEBSITES, date_created=timezone.now(), content=domain.site, isProcessed=False, parent=parent.user)
+                    alert = createAlert(color= "blue", alert_string="Website Alert !", icon="ion-android-globe", type=C_WEBSITES, date_created=timezone.now(), content=domain.site, isProcessed=False, teen=teenProf)
 		    try:
                        alert.save()
                     except Exception as e:
@@ -250,7 +316,7 @@ def triggerCheck(dict):
                 #print "the number and the trigger word are " + str(number.number) + " and " + str(trigger.triggerWord)
                 if( trigger.triggerWord.replace("-", "") == str(number.number).replace("-", "") ):
                     sendGcmAlert(parent, "Phone Call Alert: Detected a call from a number on the trigger list !")
-                    alert = createAlert(type=C_NUMBER,from_who=number.number, date_created=timezone.now(), content=number.number, isProcessed=False, parent=parent.user)
+                    alert = createAlert(color= "green", alert_string="Number Alert !", icon="ion-android-call", from_who=number.number, type=C_NUMBER, date_created=timezone.now(), content=text.number, isProcessed=False,  teen=teenProf)
 		    try:
                        alert.save()
                     except Exception as e:
@@ -382,7 +448,7 @@ class GetIds(generics.ListAPIView):
         profile = user.User
         list = UserProfile.objects.filter(email=profile.email)
         print profile.user.email
-        list2 = UserProfile.objects.filter(email=profile.user.email)
+        list2 = UserProfile.objects.filter(parent=user)
         qs = list | list2
         return qs
 
@@ -600,7 +666,7 @@ def getFbData(teens):
                         if(triggerHit):
                             print "Social Alert: Detected a Post with that contains a word from trigger list !"
                             sendGcmAlert(user_profile, "Post Alert: Detected a Post with that contains a word from trigger list !")
-                            createAlert(type=C_FB, date_created=timezone.now(),isProcessed=False, content=message, parent=user_profile.parent, from_who=name, id=int(id.split('_',1)[0]))
+                            createAlert(color= "yellow", alert_string="Social Media Alert !", icon="ion-social-facebook", type=C_FB, date_created=timezone.now(),isProcessed=False, content=message, teen=user_profile, from_who=name, id=int(id.split('_',1)[0]))
 
                     #analyzing the post messages
                     if(dict.get("emo_score") == "negative"):
@@ -1048,6 +1114,126 @@ def processNumbers(teens):
           dict["data_type"] = 3
           dict["profile"] = teen
           fetchAndProcess(dict)
+
+def getMonthProperties(monthNumber, year):
+    monthNumber = int(monthNumber)
+    if monthNumber == 1:
+        fstDayAndNumOfDays = calendar.monthrange(year,int(monthNumber))
+        month = "January"
+        return fstDayAndNumOfDays + (month,)
+
+    if monthNumber == 2:
+        fstDayAndNumOfDays = calendar.monthrange(year,int(monthNumber))
+        month = "Feburary"
+        return fstDayAndNumOfDays + (month,)
+
+    if monthNumber == 3:
+        fstDayAndNumOfDays = calendar.monthrange(year,int(monthNumber))
+        month = "March"
+        return fstDayAndNumOfDays + (month,)
+
+    if monthNumber == 4:
+        fstDayAndNumOfDays = calendar.monthrange(year,int(monthNumber))
+        month = "April"
+        return fstDayAndNumOfDays + (month,)
+
+    if monthNumber == 5:
+        fstDayAndNumOfDays = calendar.monthrange(year,int(monthNumber))
+        month = "May"
+        return fstDayAndNumOfDays + (month,)
+
+    if monthNumber == 6:
+        fstDayAndNumOfDays = calendar.monthrange(year,int(monthNumber))
+        month = "June"
+        return fstDayAndNumOfDays + (month,)
+
+    if monthNumber == 7:
+        fstDayAndNumOfDays = calendar.monthrange(year,int(monthNumber))
+        month = "July"
+        return fstDayAndNumOfDays + (month,)
+
+    if monthNumber == 8:
+        fstDayAndNumOfDays = calendar.monthrange(year,int(monthNumber))
+        month = "August"
+        return fstDayAndNumOfDays + (month,)
+
+    if monthNumber == 9:
+        fstDayAndNumOfDays = calendar.monthrange(year,int(monthNumber))
+        month = "September"
+        return fstDayAndNumOfDays + (month,)
+
+    if monthNumber == 10:
+        fstDayAndNumOfDays = calendar.monthrange(year,int(monthNumber))
+        month = "October"
+        return fstDayAndNumOfDays + (month,)
+
+    if monthNumber == 11:
+        fstDayAndNumOfDays = calendar.monthrange(year,int(monthNumber))
+        month = "November"
+        return fstDayAndNumOfDays + (month,)
+
+    if monthNumber == 12:
+        fstDayAndNumOfDays = calendar.monthrange(year,int(monthNumber))
+        month = "December"
+        return fstDayAndNumOfDays + (month,)
+
+    else:
+        return "Undefined"
+
+def calendar_np(request):
+    currentDay = datetime.date.today().strftime("%d")
+    year = int(datetime.date.today().strftime("%y"))
+    monthNumber = datetime.date.today().strftime("%m")
+    month = getMonthProperties(monthNumber,year)[2]
+    nextAddress = "/CD9/Calendar/"+str((int(monthNumber) + 1))+"-"+str(year)
+    prevAddress = "/CD9/Calendar/"+str(int(monthNumber) - 1)+"-"+str(year)
+    fstDayOfMonth = int(calendar.monthrange(year,int(monthNumber))[0])
+    secondWkSp = 7 - fstDayOfMonth
+    daysInMonth = calendar.monthrange(year,int(monthNumber))[1]
+    daysInMonth = range(daysInMonth+1)[secondWkSp:]
+    startingPoints = [secondWkSp, secondWkSp+7, secondWkSp+14, secondWkSp+21]
+    endingPoints = [secondWkSp+6, secondWkSp+13, secondWkSp+20, secondWkSp+27]
+    actionUrl = "/CD9/Calendar/" + str(monthNumber) + "-" + str(year) +"/"
+    context_dictionary = {'monthstr':month, 'yearstr':year, 'currentDay':currentDay, 'fstDayOfMonth':range(fstDayOfMonth+1), 'daysInMonth':daysInMonth}
+    context_dictionary['leftOver'] = range(secondWkSp)[1:]
+    context_dictionary['startingPoints'] = startingPoints
+    context_dictionary['endingPoints'] = endingPoints
+    context_dictionary['next'] = nextAddress
+    context_dictionary['prev'] = prevAddress
+    context_dictionary['actionUrl'] = actionUrl
+    context_dictionary['month'] = monthNumber
+    context_dictionary['year'] = year + 2000
+    return render(request, 'calendar.html', context_dictionary)
+
+def calendar_wp(request, Date):
+    monthNumber = int(string.split(Date, "-")[0])
+    year = int(string.split(Date, "-")[1])
+    if(monthNumber == 13):
+        monthNumber = 1
+        year += 1
+    if(monthNumber == 0):
+        monthNumber = 12
+        year -= 1
+    month = getMonthProperties(monthNumber,year)[2]
+    nextAddress = "/CD9/Calendar/"+str((int(monthNumber) + 1))+"-"+str(year)
+    prevAddress = "/CD9/Calendar/"+str(int(monthNumber) - 1)+"-"+str(year)
+    fstDayOfMonth = int(calendar.monthrange(year,int(monthNumber))[0])
+    secondWkSp = 7 - fstDayOfMonth
+    daysInMonth = calendar.monthrange(year,int(monthNumber))[1]
+    daysInMonth = range(daysInMonth+1)[secondWkSp:]
+    startingPoints = [secondWkSp, secondWkSp+7, secondWkSp+14, secondWkSp+21]
+    endingPoints = [secondWkSp+6, secondWkSp+13, secondWkSp+20, secondWkSp+27]
+    actionUrl = "/CD9/Calendar/" + str(monthNumber) + "-" + str(year) +"/"
+    context_dictionary = {'monthstr':month, 'yearstr':year, 'fstDayOfMonth':range(fstDayOfMonth+1), 'daysInMonth':daysInMonth}
+    context_dictionary['leftOver'] = range(secondWkSp)[1:]
+    context_dictionary['startingPoints'] = startingPoints
+    context_dictionary['endingPoints'] = endingPoints
+    context_dictionary['next'] = nextAddress
+    context_dictionary['prev'] = prevAddress
+    context_dictionary['actionUrl'] = actionUrl
+    context_dictionary['month'] = monthNumber
+    context_dictionary['year'] = year + 2000
+    return render(request, 'calendar.html', context_dictionary)
 
 def processAllData(request):
 

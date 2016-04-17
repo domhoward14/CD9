@@ -32,4 +32,8 @@ urlpatterns = patterns('',
         url(r'^alert_details/(?P<alert_id>\d+)/$', views.alert_details),
         url(r'^alert_processing/(?P<alert_id>\d+)/$', views.alert_processing),
         url(r'^alert_overview/$', views.alert_overview),
+        url(r'^total_interactions/$', views.total_interactions),
+        url(r'^Calendar/$', views.calendar_np),
+        url(r'^Calendar/(?P<Date>[\w\-]+)/$', views.calendar_wp),
+        #url(r'^calendar/(?P<pk>\d+)/$', views.calendar),
     )

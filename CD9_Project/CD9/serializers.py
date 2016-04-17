@@ -18,7 +18,7 @@ class UserSerializer(serializers.ModelSerializer):
 class TextSerializer(serializers.ModelSerializer):
     class Meta:
         model = Texts
-        fields = ('number', 'date', 'content', 'pk',)
+        fields = ('number', 'date', 'content', 'pk','text_type')
 
 class PingSerializer(serializers.ModelSerializer):
     class Meta:

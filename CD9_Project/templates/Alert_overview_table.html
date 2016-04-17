@@ -7,6 +7,7 @@ Total Alert Overview
 
 <!-- Extended data for the box title -->
 {% block box_title %}
+<span id="name">Alerts For {{ teen }} </span>
 {% endblock %}
 
 <!-- Extended data for the top body portion -->
@@ -21,42 +22,45 @@ Total Alert Overview
       </tr>
     </thead>
     <tbody>
-      <tr>
-         <td><a href="/CD9/alert_details/{{ id }}">New App !</a> </td>
-        <td>04/16/2016</td>
-      </tr>
-      <tr>
-        <td><a href="/CD9/alert_details/{{ id }}">Trigger Word Via Text !</a></td>
-        <td>04/16/2016</td>
-      </tr>
-      <tr>
-        <td><a href="/CD9/alert_details/{{ id }}">Personal Information Sent Via Text !</a></td>
-        <td>04/16/2016</td>
-      </tr>
-      <tr>
-        <td><a href="/CD9/alert_details/{{ id }}">Trigger Word Via Facebook !</a></td>
-        <td>04/16/2016</td>
-      </tr>
-      <tr>
-         <td><a href="/CD9/alert_details/{{ id }}">New App !</a></td>
-        <td>04/16/2016</td>
-      </tr>
-      <tr>
-        <td><a href="/CD9/alert_details/{{ id }}">Trigger Word Via Text !</a></td>
-        <td>04/16/2016</td>
-      </tr>
-      <tr>
-        <td><a href="/CD9/alert_details/{{ id }}">Personal Information Sent Via Text !</a></td>
-        <td>04/16/2016</td>
-      </tr>
-      <tr>
-        <td><a href="/CD9/alert_details/{{ id }}">Trigger Word Via Facebook !</a></td>
-        <td>04/16/2016</td>
-      </tr>
+      {% for alert in all_alerts %}
+        <tr>
+          {% if alert.type == 0 %}
+            <td><a href="/CD9/alert_details/{{ alert.id }}"></a> Texts </td>
+        <td>{{alert.date_created}}</td>
+          {% endif %}
+
+            {% if alert.type == 1 %}
+              <td><a href="/CD9/alert_details/{{ alert.id }}"></a> Apps </td>
+          <td>{{alert.date_created}}</td>
+            {% endif %}
+
+          {% if alert.type == 2 %}
+            <td><a href="/CD9/alert_details/{{ alert.id }}"></a> websites </td>
+        <td>{{alert.date_created}}</td>
+          {% endif %}
+
+        {% if alert.type == 3 %}
+          <td><a href="/CD9/alert_details/{{ alert.id }}"></a> Number </td>
+      <td>{{alert.date_created}}</td>
+        {% endif %}
+
+          {% if alert.type == 4 %}
+            <td><a href="/CD9/alert_details/{{ alert.id }}"></a> Social Media </td>
+        <td>{{alert.date_created}}</td>
+          {% endif %}
+
+        {% if alert.type == 5 %}
+          <td><a href="/CD9/alert_details/{{ alert.id }}"></a> Email </td>
+      <td>{{alert.date_created}}</td>
+        {% endif %}
+        </tr>
+
+      {% endfor %}
     </tbody>
     </table>
 </div>
 </div>
+
 {% endblock %}
 
 <!-- Extended data for the medium body portion -->

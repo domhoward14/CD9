@@ -73,17 +73,6 @@ Emotional Analysis Calendar
                 </tbody>
             </table>
         </div>
-            <div id="popup_box">
-                <form action={{ actionUrl }} method="post">
-                    {% csrf_token %}
-                        <table id="form_table">
-                            {{ form.as_table }}
-                        </table>
-                    <input type="submit" value="Submit" />
-                </form>
-                <a id="popupBoxClose">Close</a>
-            </div>
-    </div>
 {% endblock %}
 
 <!-- Extended data for the medium body portion -->

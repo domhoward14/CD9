@@ -61,7 +61,7 @@ class Phone_Calls(models.Model):
 class Texts(models.Model):
     number = models.IntegerField()
     date = models.DateTimeField()
-    content = models.CharField(max_length=160, default='default_text')
+    content = models.CharField(max_length=1600, default='default_text', blank=True, null=True)
     owner = models.ForeignKey('auth.User', related_name='Texts')
     emo_score = models.IntegerField(default=0)
     isProcessed = models.BooleanField(default=False)
@@ -123,8 +123,11 @@ class Alerts(models.Model):
     date_created = models.DateTimeField(null=True)
     isProcessed = models.BooleanField(default=False)
     content = models.CharField(default="null", max_length=500, )
-    parent = models.ForeignKey(User, on_delete=models.CASCADE, related_name='owner')
+    teen = models.ForeignKey(UserProfile, on_delete=models.CASCADE, related_name='alert_teen')
     from_who = models.CharField(default="null", max_length=50,)
+    color = models.CharField(default="yellow", max_length=50)
+    alert_string = models.CharField(default="N/A", max_length=50)
+    icon = models.CharField(default="N/A", max_length=50)
 
 
 class Gmail(models.Model):

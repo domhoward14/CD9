@@ -1,0 +1,93 @@
+{% extends 'base.html' %}
+
+<!-- Extended data for the title -->
+{% block title %}
+<span id=name> All {{ teen }}'s Interactions </span>
+{% endblock %}
+
+<!-- Extended data for the box title-->
+
+<!-- Extended data for the top body portion -->
+{% block top %}
+<div class="col-sm-6">
+  <h3> Messages From {{teen}}</h3>
+  <table class="table table-hover">
+    <thead>
+      <tr>
+        <th>Recipient</th>
+        <th># of Texts</th>
+        <th># of Social Media Posts</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Mike</td>
+        <td>33</td>
+        <td>0</td>
+      </tr>
+      <tr>
+        <td>Bobby</td>
+        <td>33</td>
+        <td>0</td>
+      </tr>
+      <tr>
+        <td>jimmy</td>
+        <td>33</td>
+        <td>0</td>
+      </tr>
+      <tr>
+        <td>timmy</td>
+        <td>33</td>
+        <td>0</td>
+      </tr>
+    </tbody>
+    </table>
+</div>
+
+  <div class="col-sm-6">
+    <h3> Messages To {{teen}}</h3>
+    <table class="table table-hover">
+      <thead>
+        <tr>
+          <th>Sender</th>
+          <th># of Texts</th>
+          <th># of Social Media Posts</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Mike</td>
+          <td>33</td>
+          <td>0</td>
+        </tr>
+        <tr>
+          <td>Bobby</td>
+          <td>33</td>
+          <td>0</td>
+        </tr>
+        <tr>
+          <td>jimmy</td>
+          <td>33</td>
+          <td>0</td>
+        </tr>
+        <tr>
+          <td>timmy</td>
+          <td>33</td>
+          <td>0</td>
+        </tr>
+      </tbody>
+      </table>
+  </div>
+{% endblock %}
+
+<!-- Extended data for the medium body portion -->
+{% block middle %}
+{% endblock %}
+
+<!-- Extended data for the bottom body portion -->
+{% block bottom %}
+{% endblock %}
+
+<!-- Extended data for the footer -->
+{% block footer %}
+{% endblock %}

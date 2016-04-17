@@ -5,7 +5,7 @@
 
  <script src=https://cdnjs.cloudflare.com/ajax/libs/Chart.js/1.0.2/Chart.js> </script>
  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.9.0/jquery.min.js"></script>
-
+<link rel="stylesheet" href="{{STATIC_URL}}css/calendar.css">
 <style>
 
     .fill-div {
@@ -86,67 +86,61 @@
         <ol class="carousel-indicators">
           <li data-target="#myCarousel" data-slide-to="0" class="active"></li>
 
-          <!-- for 1 to alerts.length -->
-          <li data-target="#myCarousel" data-slide-to="1"></li>
-          <li data-target="#myCarousel" data-slide-to="2"></li>
-          <li data-target="#myCarousel" data-slide-to="3"></li>
+          {% for i in alert_range %}
+              <li data-target="#myCarousel" data-slide-to="{{i}}"></li>
+          {% endfor %}
         </ol>
 
         <!-- Wrapper for slides -->
         <div class="carousel-inner" role="listbox">
           <!--The first picture needs to have item active class  EH-->
+          {% if alert_count == 1 %}
+            {% for alert in alert_list %}
+              <div class="item active">
+                <div class="small-box bg-yellow alert_box">
+                  <div class="inner">
+                    <h3>{{alert.alert_string}}</h3>
+                  </div>
+                  <div class="icon">
+                    <i class="{{alert.icon}}"></i>
+                  </div>
+                  <a href="/CD9/alert_details/{{alert.id}}" class="small-box-footer">
+                    More info <i class="fa fa-arrow-circle-right"></i>
+                  </a>
+                </div>
+              </div>
+            {% endfor %}
+          {% else %}
           <div class="item active">
-              <!-- If new alerts, show alert box, else show default text and exit -->
-            <!-- small box -->
-            <div class="small-box bg-yellow alert_box">
+            <div class="small-box bg-{{first_alert.color}} alert_box">
               <div class="inner">
-                <h3>44</h3>
-                <p>User Registrations</p>
+                <h3>"{{ first_alert.alert_string }}"</h3>
               </div>
               <div class="icon">
-                <i class="ion ion-person-add"></i>
+                <i class="{{first_alert.icon}}"></i>
               </div>
-              <a href="/CD9/alert_details/" class="small-box-footer">
+              <a href="/CD9/alert_details/{{first_alert.id}}" class="small-box-footer">
                 More info <i class="fa fa-arrow-circle-right"></i>
               </a>
             </div>
           </div>
 
-          <!-- for new alerts, from alert.next to alert.last ... -->
           <!--All other slides simply are of class item  EH-->
-          <div class="item">
-            <div class="small-box bg-yellow alert_box">
-              <div class="inner">
-                <h3>44</h3>
-                <p>User Registrations</p>
+          {% for alert in alert_list %}
+            <div class="item">
+              <div class="small-box bg-{{alert.color}} alert_box">
+                <div class="inner">
+                  <h3>"{{alert.alert_string}}"</h3>
+                </div>
+                <div class="icon">
+                  <i class="{{alert.icon}}"></i>
+                </div>
+                <a href="/CD9/alert_details/{{alert.id}}" class="small-box-footer">
+                  More info <i class="fa fa-arrow-circle-right"></i>
+                </a>
               </div>
-              <div class="icon">
-                <i class="ion ion-person-add"></i>
-              </div>
-              <a href="/CD9/alert_details/" class="small-box-footer">
-                More info <i class="fa fa-arrow-circle-right"></i>
-              </a>
             </div>
-          </div>
-
-          <div class="item">
-            <div class="small-box bg-yellow alert_box">
-              <div class="inner">
-                <h3>44</h3>
-                <p>User Registrations</p>
-              </div>
-              <div class="icon">
-                <i class="ion ion-person-add"></i>
-              </div>
-              <a href="/CD9/alert_details/" class="small-box-footer">
-                More info <i class="fa fa-arrow-circle-right"></i>
-              </a>
-            </div>
-
-        </div>
-    {% endif %}
-
-
+          {% endfor %}
 
       <!-- Left and right controls -->
       <a class="left carousel-control" href="#myCarousel" role="button" data-slide="prev">
@@ -161,6 +155,8 @@
 
 </a>
 </div>
+{% endif %}
+{% endif %}
 {% endblock %}
 
 {% block box_title_alerts %}
@@ -169,7 +165,7 @@
 <!-- Extended data for the app body -->
 {% block body_alerts %}
     <a href="/CD9/alert_overview/" class="fill-div center-block" target="_blank">
-      <canvas class="chart-canvas" id="alert-catagory-graph" width="500" height="500" style=""></canvas>
+      <canvas class="chart-canvas" id="alert-catagory-graph" width="400" height="400" style=""></canvas>
     </a>
 {% endblock %}
 
@@ -179,7 +175,7 @@
 
 <!-- Extended data for the app body portion -->
 {% block body_sites %}
-    <canvas class="chart-canvas" id="app-catagory-graph" width="500" height="500" style=""></canvas>
+    <canvas class="chart-canvas" id="app-catagory-graph" width="400" height="400" style=""></canvas>
 {% endblock %}
 
 <!-- Extended data for the app usage title  portion -->
@@ -230,8 +226,148 @@
 </table>
 {% endblock %}
 
-<!-- Extended data for the footer body portion -->
+{% block box_title_calendar %} Emotional Analysis Calendar {% endblock %}
+{% block body_calendar %}
+<div id="cal">
+        <div class="header">
+            <span class="left hook"></span>
+            <span class="right hook"></span>
+            <span class="left button" id="prev"><a class="arrow" href={{ prev }}>&lang;</a></span>
+            <span class="right button" id="next"><a class="arrow" href={{ next }}>&rang;</a></span>
+            <div id="headerContent">
+                <span class="month-year" id="label">{{ monthstr }} 20{{ yearstr }}</span><!--dynamically add month and year here-->
+            </div>
+        </div>
+        <table id="days">
+            <td>sun</td>
+            <td>mon</td>
+            <td>tue</td>
+            <td>wed</td>
+            <td>thu</td>
+            <td>fri</td>
+            <td>sat</td>
+        </table>
+        <div id="cal-frame">
+            <table class="curr">
+                <tbody id="calBody"><!--dynamically add the class date, and figure out the starting day of the the loop months days(usearray)-->
+                <tr>
+                    {% for i in fstDayOfMonth%}
+                        <td class="nil"  ></td>
+                    {% endfor %}
+                    {% for i in leftOver %}
+                            <td class="day" >
+                                {{ i }}
+                                happy face !
+                            </td>
+                    {% endfor %}
+                </tr>
+                    {% for day in daysInMonth %}
+                        {% if day == startingPoints.0 or day == startingPoints.1 or day == startingPoints.2 or day == startingPoints.3%}
+                            <tr>
+                                <td class="day">
+                                    {{ day }}
+                                    happy face !
+                                </td>
+                        {% elif day == endingPoints.0 or day == endingPoints.1 or day == endingPoints.2 or day == endingPoints.3%}
+                                <td class="day" >
+                                    {{ day }}
+                                    happy face !
+                                </td>
+                            </tr>
+                        {% else  %}
+                                <td class="day" >
+                                    {{ day }}
+                                    happy face !
+                                </td>
+                        {% endif %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+{% endblock  %}
+
+{% block box_title_interactions %} <span id=name>{{teen}}'s Interactions</span> {% endblock %}
+
+{% block body_interactions %}
+<a href="/CD9/total_interactions/">
+<canvas class="chart-canvas" id="interactions-graph" width="400" height="400" style=""></canvas>
+</a>
+{% endblock  %}
+
 {% block footer %}
+<script>
+var dataPie = [
+    {
+        value: 60,
+        color: "#F7464A",
+        highlight: "#FF5A5E",
+        label: "Porn"
+    },
+    {
+        value: 20,
+        color: "#46BFBD",
+        highlight: "#5AD3D1",
+        label: "New Apps"
+    },
+    {
+        value: 10,
+        color: "#46BFBD",
+        highlight: "#5AD3D1",
+        label: "New contact"
+    },
+    {
+        value: 10,
+        color: "#FDB45C",
+        highlight: "#FFC870",
+        label: "Yellow"
+    }
+];
+
+var optionsPie =
+    {
+        tooltipEvents: [],
+
+        showTooltips: true,
+
+        onAnimationComplete: function () {
+                this.showTooltip(this.segments, true);
+            },
+
+        //Boolean - Whether we should show a stroke on each segment
+        segmentShowStroke : true,
+
+        //String - The colour of each segment stroke
+        segmentStrokeColor : "#fff",
+
+        //Number - The width of each segment stroke
+        segmentStrokeWidth : 2,
+
+        //Number - The percentage of the chart that we cut out of the middle
+        percentageInnerCutout : 0, // This is 0 for Pie charts
+
+        //Number - Amount of animation steps
+        animationSteps : 100,
+
+        //String - Animation easing effect
+        animationEasing : "easeOutBounce",
+
+        //Boolean - Whether we animate the rotation of the Doughnut
+        animateRotate : true,
+
+        //Boolean - Whether we animate scaling the Doughnut from the centre
+        animateScale : true,
+
+        //String - A legend template
+        legendTemplate : "<ul class=\"<\%=name.toLowerCase()\%>-legend\"><\% for (var i=0; i<segments.length; i++){\%><li><span style=\"background-color:<\%=segments[i].fillColor\%>\"></span><\%if(segments[i].label){\%><\%=segments[i].label\%><\%}\%></li><\%}\%></ul>"
+
+    };
+
+    //var alertContext = document.getElementById("alert-catagory-graph").getContext("2d");
+    var appContext = document.getElementById("interactions-graph").getContext("2d");
+    // For a pie chart
+    var myAlertPieChart = new Chart(appContext).Pie(dataPie,optionsPie);
+
+</script>
 <script src="{{STATIC_URL}}AlertPieGraph.js"></script>
 <script src="{{STATIC_URL}}AppPieGraph.js"></script>
 {% endblock %}
