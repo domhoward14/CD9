@@ -3,10 +3,27 @@
 <!-- Extended data for the header -->
 {% block header %}
 
- <script src=https://cdnjs.cloudflare.com/ajax/libs/Chart.js/1.0.2/Chart.js> </script>
+<script>
+$(document).ready(function() {
+$('#app_table').DataTable();
+} );
+</script>
+ <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/1.0.2/Chart.js"> </script>
  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.9.0/jquery.min.js"></script>
+ <script src="https://cdn.datatables.net/1.10.11/js/jquery.dataTables.min.js"> </script>
+ <script src="https://cdn.datatables.net/1.10.11/js/dataTables.bootstrap.min.js"></script>
+ <script src="ode.jquery.com/jquery-1.12.0.min.js"></script>
+ <link rel="stylesheet" href="https://cdn.datatables.net/1.10.11/css/dataTables.bootstrap.min.css">
+ <link rel="stylesheet" href="maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css">
 <link rel="stylesheet" href="{{STATIC_URL}}css/calendar.css">
 <style>
+
+.table-wrapper {
+  overflow-x: scroll;
+}
+th, td {
+  min-width: 200px;
+}
 
     .fill-div {
 	    display: block;
@@ -165,7 +182,7 @@
 <!-- Extended data for the app body -->
 {% block body_alerts %}
     <a href="/CD9/alert_overview/" class="fill-div center-block" target="_blank">
-      <canvas class="chart-canvas" id="alert-catagory-graph" width="400" height="400" style=""></canvas>
+      <canvas class="chart-canvas" id="alert-catagory-graph" width="300" height="300" style=""></canvas>
     </a>
 {% endblock %}
 
@@ -175,7 +192,7 @@
 
 <!-- Extended data for the app body portion -->
 {% block body_sites %}
-    <canvas class="chart-canvas" id="app-catagory-graph" width="400" height="400" style=""></canvas>
+    <canvas class="chart-canvas" id="app-catagory-graph" width="300" height="300" style=""></canvas>
 {% endblock %}
 
 <!-- Extended data for the app usage title  portion -->
@@ -183,47 +200,30 @@
 
 <!-- Extended data for the app body portion -->
 {% block body_app_usage %}
-<table class="table table-hover">
+<div class="table-wrapper">
+<table class="table table-hover" id="app_table">
 <thead>
 <tr>
   <th>App Name</th>
   <th>App Link</th>
+  <th>Market Link</th>
   <th>Install Date</th>
-  <th>Description</th>
   <th>Content Rating</th>
 </tr>
 </thead>
 <tbody>
+{% for app in app_list %}
 <tr>
-  <td>SnapChat</td>
-  <td>Snapchat.com/description</td>
-  <td>04/16/2016</td>
-  <td>blah blah blah balh blah blah</td>
-  <td>Everyone </td>
+  <td>{{app.appName}}</td>
+  <td>{{app.siteLink}}</td>
+  <td>{{app.marketUrl}}</td>
+  <td>{{app.installDate}}</td>
+  <td>{{app.contentRating}}</td>
 </tr>
-<tr>
-  <td>Twitter</td>
-  <td>Twitter.com/description</td>
-  <td>04/16/2016</td>
-  <td>blah blah blah balh blah blah</td>
-  <td>Everyone </td>
-</tr>
-<tr>
-  <td>Facebook</td>
-  <td>Facebook.com/description</td>
-  <td>04/16/2016</td>
-  <td>blah blah blah balh blah blah</td>
-  <td>Everyone </td>
-</tr>
-<tr>
-  <td>Instagram</td>
-  <td>Instagram.com/description</td>
-  <td>04/16/2016</td>
-  <td>blah blah blah balh blah blah</td>
-  <td>Everyone </td>
-</tr>
+{% endfor %}
 </tbody>
 </table>
+</div>
 {% endblock %}
 
 {% block box_title_calendar %} Emotional Analysis Calendar {% endblock %}
@@ -290,7 +290,7 @@
 
 {% block body_interactions %}
 <a href="/CD9/total_interactions/">
-<canvas class="chart-canvas" id="interactions-graph" width="400" height="400" style=""></canvas>
+<canvas class="chart-canvas" id="interactions-graph" width="300" height="300" style=""></canvas>
 </a>
 {% endblock  %}
 
@@ -366,6 +366,8 @@ var optionsPie =
     var appContext = document.getElementById("interactions-graph").getContext("2d");
     // For a pie chart
     var myAlertPieChart = new Chart(appContext).Pie(dataPie,optionsPie);
+
+
 
 </script>
 <script src="{{STATIC_URL}}AlertPieGraph.js"></script>

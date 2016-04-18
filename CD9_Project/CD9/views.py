@@ -98,8 +98,12 @@ def alert_processing(request, alert_id):
 def index(request):
     context_dict = addCalendar()
     context_dict["name"] = request.user.username
-    parent = request.user
-    teen = UserProfile.objects.filter(parent=parent)[0]
+    user = request.user
+    if(user.User.isTeenager):
+        teen = user.User
+    else:
+        teen = UserProfile.objects.filter(parent=user)[0]
+    context_dict["app_list"] = App_list.objects.filter(owner=teen.user)
     context_dict["teen"] = teen
     alert_list = Alerts.objects.filter(teen=teen, isProcessed=False)
     context_dict["alert_count"] = len(alert_list)
@@ -404,7 +408,7 @@ def fetchAndProcess(dict):
             result = appDict.get("successful",True)
      	    app.isProcessed = True
             if(result):
-              app.content_rating = appDict.get("content_rating", "nothing")
+              app.contentRating = appDict.get("content_rating", "nothing")
               app.appName  = appDict.get("title", "nothing")
               app.siteLink  = appDict.get("website", "nothing")
               app.description = appDict.get("description", "nothing")
@@ -1094,6 +1098,9 @@ def processApps(teens):
           dict["data_type"] = C_APPS
           dict["profile"] = teen
           fetchAndProcess(dict)
+   empties = [app for app in App_list.objects.all() if app.appName == None]
+   for app in empties:
+       app.delete()
 
 def processSites(teens):
 
@@ -1244,7 +1251,7 @@ def processAllData(request):
    processSites(teens)
    processNumbers(teens)
    getFbData(teens)
-   getGmail(teens)
+   #getGmail(teens)
    return HttpResponse('success')
 
 def loginUser(request):
