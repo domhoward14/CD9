@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+
+<!-- Extended data for the title -->
+{% block title %}
+App Description
+{% endblock %}
+
+<!-- Extended data for the box title -->
+{% block box_title %}
+<h3 id=name>{{app.appName}} Description</h3>
+{% endblock %}
+
+<!-- Extended data for the top body portion -->
+{% block top %}
+  {% if app.description %}
+    <p>{{app.description}}</P>
+  {% else %}
+    <p> Currently No Description Is Available</p>
+  {% endif %}
+</br>
+</br>
+{% if app.siteLink %}
+  <strong><p>For more information follow this link : <a href={{app.siteLink}}>{{app.siteLink}}</a></P></strong>
+{% else %}
+  <p> </p>
+{% endif %}
+{% endblock %}
+
+<!-- Extended data for the medium body portion -->
+{% block middle %}
+{% endblock %}
+
+<!-- Extended data for the bottom body portion -->
+{% block bottom %}
+{% endblock %}
+
+<!-- Extended data for the footer -->
+{% block footer %}
+{% endblock %}

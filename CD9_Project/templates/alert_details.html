@@ -13,7 +13,7 @@
 {% block top %}
 
 <div class="col-sm-12">
-  <form method ="post" action="/CD9/alert_details/{{ alert.id }}/">
+  <form method ="post" action="/CD9/{{ alert.id }}/">
     {% csrf_token %}
       <table class="table table-hover">
     <thead>

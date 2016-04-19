@@ -56,7 +56,30 @@ C_NUMBER = 3
 C_FB = 4
 C_EMAIL = 5
 
+C_Arts = 0
+C_Business= 1
+C_Computers = 2
+C_Health = 3
+C_Home =4
+C_News = 5
+C_Recreation = 6
+C_Reference = 7
+C_Science = 8
+C_Shopping = 9
+C_Society = 10
+C_Sports = 11
+
+triggerWord = models.CharField(max_length=100)
+dataType = models.IntegerField(default=6)
+owner = models.ForeignKey('auth.User', related_name='Flags')
+
+def create_flag(triggerWord, dataType, owner):
+    flag = Flags(triggerWord=triggerWord, dataType=dataType, owner=owner)
+    flag.save()
+
 def test(request):
+    user = request.user
+    parent_profile = user.User
     if(request.method == "POST"):
         form = SocialMediaForm(request.POST)
         if (form.is_valid()):
@@ -64,9 +87,50 @@ def test(request):
             data = form.cleaned_data
             print data.keys()
             print data.values()
+            #website alert
+            if (data.get("form_type") == 1):
+                create_flag(data.get("triggerWord"), data.get("form_type"), user)
+                if(data.get("active") == "select1") :
+                    parent_profile.websites_active_monitoring = True
+                else:
+                    parent_profile.websites_active_monitoring = False
+                parent_profile.save()
+
+            if (data.get("form_type") == 2):
+                create_flag(data.get("triggerWord"), data.get("form_type"), user)
+                if(data.get("active") == "select1") :
+                    parent_profile.apps_active_monitoring = True
+                else:
+                    parent_profile.apps_active_monitoring = False
+                parent_profile.save()
+
+            if (data.get("form_type") == 3):
+                create_flag(data.get("triggerWord"), data.get("form_type"), user)
+                if(data.get("active") == "select1") :
+                    parent_profile.calls_active_monitoring = True
+                else:
+                    parent_profile.calls_active_monitoring = False
+                parent_profile.save()
+
+            if (data.get("form_type") == 4):
+                create_flag(data.get("triggerWord"), data.get("form_type"), user)
+                if(data.get("active") == "select1") :
+                    parent_profile.numbers_active_monitoring = True
+                else:
+                    parent_profile.numbers_active_monitoring = False
+                parent_profile.save()
+
+            if (data.get("form_type") == 5):
+                create_flag(data.get("triggerWord"), data.get("form_type"), user)
+                if(data.get("active") == "select1") :
+                    parent_profile.social_active_monitoring = True
+                else:
+                    parent_profile.social_active_monitoring = False
+                parent_profile.save()
+
             return HttpResponse("yay")
         else:
-            return HttpResponse("nooooo")
+            return HttpResponse("Invalid Selection !")
     else:
         texts_form = TextsForm()
         context_dict = {'texts_form': texts_form}
@@ -77,9 +141,15 @@ def test(request):
         return render(request, 'settings.html', context_dict)
 
 def alert_overview(request):
-    parent = request.user.id
-    teen = UserProfile.objects.filter(parent=parent)[0]
+    user = request.user
+    is_teen = True
+    if(user.User.isTeenager):
+        teen = user.User
+    else:
+        teen = UserProfile.objects.filter(parent=user)[0]
+        is_teen = False
     context_dict = {'all_alerts': Alerts.objects.filter(teen=teen)}
+    context_dict["is_teen"] = is_teen
     context_dict["teen"] = teen
     return render(request, 'Alert_overview_table.html', context_dict)
 
@@ -94,15 +164,30 @@ def alert_processing(request, alert_id):
     context_dict["alert_count"] = 1
     return render(request, 'index.html', context_dict)
 
+
+
 @login_required
-def index(request):
-    context_dict = addCalendar()
-    context_dict["name"] = request.user.username
+def index(request,alert_id=""):
+    if(request.method == "POST"):
+        alert = Alerts.objects.get(id=alert_id)
+        alert.isProcessed = True
+        alert.save()
     user = request.user
+    is_teen = True
     if(user.User.isTeenager):
         teen = user.User
     else:
         teen = UserProfile.objects.filter(parent=user)[0]
+        is_teen = False
+    context_dict = addCalendar(teen)
+    context_dict["name"] = request.user.username
+    sites = Web_History.objects.filter(owner = teen.user)
+    alerts = Alerts.objects.filter(teen = teen)
+    context_dict["sites"] = sites
+    context_dict["alerts"] = alerts
+    context_dict["is_teen"] = is_teen
+    context_dict["alert_json"] = mark_safe(json.dumps(get_alert_json(alerts)))
+    context_dict["web_json"] = mark_safe(json.dumps(get_web_json(sites)))
     context_dict["app_list"] = App_list.objects.filter(owner=teen.user)
     context_dict["teen"] = teen
     alert_list = Alerts.objects.filter(teen=teen, isProcessed=False)
@@ -116,14 +201,8 @@ def index(request):
     context_dict["alert_range"] = range(context_dict["alert_count"] + 1)[1:]
     return render(request, 'index.html', context_dict)
 
-def total_interactions(request):
-    context_dict = {"name":request.user.username}
-    parent = request.user
-    teen = UserProfile.objects.filter(parent=parent)[0]
-    context_dict["teen"] = teen
-    return render(request, 'total_interactions.html', context_dict)
 
-def addCalendar():
+def addCalendar(teen):
     currentDay = datetime.date.today().strftime("%d")
     year = int(datetime.date.today().strftime("%y"))
     monthNumber = datetime.date.today().strftime("%m")
@@ -133,52 +212,55 @@ def addCalendar():
     fstDayOfMonth = int(calendar.monthrange(year,int(monthNumber))[0])
     secondWkSp = 7 - fstDayOfMonth
     daysInMonth = calendar.monthrange(year,int(monthNumber))[1]
+    UncutDaysInMonth = daysInMonth
     daysInMonth = range(daysInMonth+1)[secondWkSp:]
     startingPoints = [secondWkSp, secondWkSp+7, secondWkSp+14, secondWkSp+21]
     endingPoints = [secondWkSp+6, secondWkSp+13, secondWkSp+20, secondWkSp+27]
     actionUrl = "/CD9/Calendar/" + str(monthNumber) + "-" + str(year) +"/"
-    context_dictionary = {'monthstr':month, 'yearstr':year, 'currentDay':currentDay, 'fstDayOfMonth':range(fstDayOfMonth+1), 'daysInMonth':daysInMonth}
-    context_dictionary['leftOver'] = range(secondWkSp)[1:]
-    context_dictionary['startingPoints'] = startingPoints
-    context_dictionary['endingPoints'] = endingPoints
-    context_dictionary['next'] = nextAddress
-    context_dictionary['prev'] = prevAddress
-    context_dictionary['actionUrl'] = actionUrl
-    context_dictionary['month'] = monthNumber
-    context_dictionary['year'] = year + 2000
-    return context_dictionary
+    context_dict = {'monthstr':month, 'yearstr':year, 'currentDay':int(currentDay), 'fstDayOfMonth':range(fstDayOfMonth+1), 'daysInMonth':daysInMonth}
+    context_dict['leftOver'] = range(secondWkSp)[1:]
+    context_dict['startingPoints'] = startingPoints
+    context_dict['endingPoints'] = endingPoints
+    context_dict['next'] = nextAddress
+    context_dict['prev'] = prevAddress
+    context_dict['actionUrl'] = actionUrl
+    context_dict['month'] = monthNumber
+    context_dict['year'] = year + 2000
+
+    emo_scores = get_monthly_emo_scores(range(UncutDaysInMonth), context_dict['year'], monthNumber, teen.user)
+    print emo_scores
+    leftOver_list = []
+    daysInMonth_list = []
+    for day in context_dict['leftOver']:
+        leftOver_list.append(dict(day=day, pic=emo_scores[day-1].get("pic")))
+    for day in context_dict['daysInMonth']:
+        daysInMonth_list.append(dict(day=day, pic=emo_scores[day-1].get("pic")))
+    context_dict["daysInMonth_list"] = daysInMonth_list
+    context_dict["leftOver_list"] = leftOver_list
+
+    return context_dict
 
 def login (request):
    return render(request, 'login.html')
 
+def app_detail (request,app_id):
+    app = App_list.objects.get(id=app_id)
+    return render(request, 'app_detail.html', {"app":app})
+
 #TEsting now, but will need to be dynamic, and allow the acknowledge button to only show if
 #the instance is not already set true for is processed
 def alert_details (request,alert_id):
-    if(request.method == "POST"):
-        alert = Alerts.objects.get(id=alert_id)
-        alert.isProcessed = True
-        alert.save()
-        context_dict = addCalendar()
-        context_dict["name"] = request.user.username
-        parent = request.user
-        teen = UserProfile.objects.filter(parent=parent)[0]
-        context_dict["teen"] = teen
-        alert_list = Alerts.objects.filter(teen=teen, isProcessed=False)
-        context_dict["alert_count"] = len(alert_list)
-        if(context_dict["alert_count"] > 1):
-            context_dict["alert_list"] = alert_list[1:]
-            context_dict["first_alert"] = alert_list[:1][0]
-        elif(context_dict["alert_count"] == 1) :
-            context_dict["first_alert"] = alert_list[0]
-            context_dict["alert_list"] = alert_list
-        context_dict["alert_range"] = range(context_dict["alert_count"] + 1)[1:]
-        return render(request, 'index.html', context_dict)
-    else:
         alert = Alerts.objects.get(id=alert_id)
         context_dict = {"alert":alert}
         return render(request, 'alert_details.html', context_dict)
 
-def settings (request):
+def settings (request, triggerword_id=''):
+
+    if(request.user.User.isTeenager):
+        return HttpResponse("Unauthorized Access !")
+    user = request.user
+    parent_profile = user.User
+
     if(request.method == "POST"):
         form = SocialMediaForm(request.POST)
         if (form.is_valid()):
@@ -186,17 +268,69 @@ def settings (request):
             data = form.cleaned_data
             print data.keys()
             print data.values()
-            return HttpResponse("yay")
+            #website alert
+            if (data.get("form_type") == 1):
+                create_flag(data.get("triggerWord"), data.get("form_type"), user)
+                if(data.get("active") == "select1") :
+                    parent_profile.websites_active_monitoring = True
+                else:
+                    parent_profile.websites_active_monitoring = False
+                parent_profile.save()
+
+            if (data.get("form_type") == 2):
+                create_flag(data.get("triggerWord"), data.get("form_type"), user)
+                if(data.get("active") == "select1") :
+                    parent_profile.apps_active_monitoring = True
+                else:
+                    parent_profile.apps_active_monitoring = False
+                parent_profile.save()
+
+            if (data.get("form_type") == 3):
+                create_flag(data.get("triggerWord"), data.get("form_type"), user)
+                if(data.get("active") == "select1") :
+                    parent_profile.calls_active_monitoring = True
+                else:
+                    parent_profile.calls_active_monitoring = False
+                parent_profile.save()
+
+            if (data.get("form_type") == 4):
+                create_flag(data.get("triggerWord"), data.get("form_type"), user)
+                if(data.get("active") == "select1") :
+                    parent_profile.numbers_active_monitoring = True
+                else:
+                    parent_profile.numbers_active_monitoring = False
+                parent_profile.save()
+
+            if (data.get("form_type") == 5):
+                create_flag(data.get("triggerWord"), data.get("form_type"), user)
+
+                if(data.get("active") == "select1") :
+                    parent_profile.social_active_monitoring = True
+                else:
+                    parent_profile.social_active_monitoring = False
+                parent_profile.save()
+
         else:
             return HttpResponse("nooooo")
-    else:
-        texts_form = TextsForm()
-        context_dict = {'texts_form': texts_form}
-        context_dict['social_media_form'] = SocialMediaForm()
-        context_dict['calls_form'] = CallsForm()
-        context_dict['apps_form'] = AppsForm()
-        context_dict['sites_form'] = SitesForm()
-        return render(request, 'settings.html', context_dict)
+
+    if(triggerword_id):
+        try:
+            flag = Flags.objects.get(id = triggerword_id)
+            flag.delete()
+        except Exception as e:
+            print e
+
+    context_dict = {'texts_form': TextsForm()}
+    context_dict['social_media_form'] = SocialMediaForm()
+    context_dict['calls_form'] = CallsForm()
+    context_dict['apps_form'] = AppsForm()
+    context_dict['sites_form'] = SitesForm()
+    context_dict['sites'] = Flags.objects.filter(owner=request.user, dataType=1)
+    context_dict['apps'] = Flags.objects.filter(owner=request.user, dataType=2)
+    context_dict['numbers'] = Flags.objects.filter(owner=request.user, dataType=3)
+    context_dict['texts'] = Flags.objects.filter(owner=request.user, dataType=4)
+    context_dict['social_posts'] = Flags.objects.filter(owner=request.user, dataType=5)
+    return render(request, 'settings.html', context_dict)
 
 @login_required
 def user_logout(request):
@@ -208,6 +342,75 @@ def daniel (request):
 
 def daniel2 (request):
    return render(request, 'danfile2.html')
+
+def getAlertCount(alerts):
+    alert_count = []
+    for i in range(6):
+        alert_count.append(0)
+    for alert in alerts:
+        i = 0
+        for i in range(6):
+             if(alert.type == i):
+                 alert_count[i] += 1
+                 break
+             i += 1
+    return alert_count
+
+def getSiteCount(sites):
+    categories = ["Arts", "Business & Economy", "Computers & Technology", "Health", "Home & Domestic Life",
+    "News", "Recreation & Activities", "Reference & Education", "Science", "Shopping", "Society", "Sports"]
+    site_count = []
+    for i in range(12):
+        site_count.append(0)
+    for site in sites:
+        i = 0
+        for category in categories:
+             if(site.category == category):
+                 site_count[i] += 1
+                 break
+             i += 1
+    return site_count
+
+def make_web_pie(site_count):
+    categories = ["Arts", "Business & Economy", "Computers & Technology", "Health", "Home & Domestic Life",
+    "News", "Recreation & Activities", "Reference & Education", "Science", "Shopping", "Society", "Sports"]
+    total_sites = sum(site_count)
+    percentages = []
+    colors = ["#0000FF", "#46BFBD", "BDB768", "9932CC", "8B0000", "00CED1", "#556B2F", "#46BFBD", "BDB768", "9932CC", "8B0000", "00CED1"]
+    dictionaries = [dict(value = 0, color="", highlight="", label="") for x in range(12)]
+    if(total_sites != 0):
+        for i in range(12):
+            percentages.append(int(round(site_count[i]/float(total_sites) * 100)))
+        for i in range(12):
+            dictionaries[i]["value"] = percentages[i]
+            dictionaries[i]["color"] = "#46BFBD"
+            dictionaries[i]["highlight"] = "#46BFBD"
+            dictionaries[i]["label"] = categories[i]
+    return dictionaries
+
+def make_alert_pie(site_count):
+    alerts = ["Texts", "Apps", "Websites", "Number", "Social Media", "Email"]
+    colors = ["#0000FF", "#46BFBD", "BDB768", "9932CC", "8B0000", "00CED1", "#556B2F"]
+    total_sites = sum(site_count)
+    percentages = []
+    dictionaries = [dict(value = 0, color="", highlight="", label="") for x in range(6)]
+    if(total_sites != 0):
+        for i in range(6):
+            percentages.append(int(round(site_count[i]/float(total_sites) * 100)))
+        for i in range(6):
+            dictionaries[i]["value"] = percentages[i]
+            dictionaries[i]["color"] = "#46BFBD"
+            dictionaries[i]["highlight"] = "#46BFBD"
+            dictionaries[i]["label"] = alerts[i]
+    return dictionaries
+
+def get_web_json(list):
+    site_count = getSiteCount(list)
+    return make_web_pie(site_count)
+
+def get_alert_json(list):
+    site_count = getAlertCount(list)
+    return make_alert_pie(site_count)
 
 def createAlert(color, alert_string, icon, type, date_created, isProcessed, content, teen, from_who='', id=''):
     if(type == C_FB):
@@ -265,7 +468,7 @@ def triggerCheck(dict):
     elif(triggerType == C_TEXTS):
         #texts = dict.get("texts")
         texts = data_set
-        trigger_list = Flags.objects.filter(owner=parent.user, dataType=C_TEXTS)
+        trigger_list = Flags.objects.filter(owner=parent.user, dataType=C_TEXTS + 1)
         for trigger in trigger_list:
             for text in texts:
                 triggerHit = re.search(trigger.triggerWord, text.content, re.IGNORECASE)
@@ -490,8 +693,8 @@ the validated user.
 """
 def createToken(user):
     token = Token.objects.create(user=user)
-    token_dictionary = {"token" : token.key}
-    return token_dictionary
+    token_dictionaries = {"token" : token.key}
+    return token_dictionaries
 
 def getToken(request):
     json_data = request.body
@@ -932,7 +1135,7 @@ def tokenAuthenticator(request):
     dict = {'fields' : 'name, email', 'access_token' : token}
     r = requests.get('https://graph.facebook.com/me', params=dict)
     parsed_data = json.loads(r.text)
-    email = parsed_data.get("email","There was an error getting the email from the dictionary")
+    email = parsed_data.get("email","There was an error getting the email from the dictionaries")
     name = parsed_data.get("name","error error")
     first_name = name.split()[0]
     last_name = name.split()[1]
@@ -1197,20 +1400,75 @@ def calendar_np(request):
     fstDayOfMonth = int(calendar.monthrange(year,int(monthNumber))[0])
     secondWkSp = 7 - fstDayOfMonth
     daysInMonth = calendar.monthrange(year,int(monthNumber))[1]
+    UncutDaysInMonth = daysInMonth
     daysInMonth = range(daysInMonth+1)[secondWkSp:]
     startingPoints = [secondWkSp, secondWkSp+7, secondWkSp+14, secondWkSp+21]
     endingPoints = [secondWkSp+6, secondWkSp+13, secondWkSp+20, secondWkSp+27]
     actionUrl = "/CD9/Calendar/" + str(monthNumber) + "-" + str(year) +"/"
-    context_dictionary = {'monthstr':month, 'yearstr':year, 'currentDay':currentDay, 'fstDayOfMonth':range(fstDayOfMonth+1), 'daysInMonth':daysInMonth}
-    context_dictionary['leftOver'] = range(secondWkSp)[1:]
-    context_dictionary['startingPoints'] = startingPoints
-    context_dictionary['endingPoints'] = endingPoints
-    context_dictionary['next'] = nextAddress
-    context_dictionary['prev'] = prevAddress
-    context_dictionary['actionUrl'] = actionUrl
-    context_dictionary['month'] = monthNumber
-    context_dictionary['year'] = year + 2000
-    return render(request, 'calendar.html', context_dictionary)
+    context_dict = {'monthstr':month, 'yearstr':year,'fstDayOfMonth':range(fstDayOfMonth+1), 'daysInMonth':daysInMonth}
+    context_dict['leftOver'] = range(secondWkSp)[1:]
+    context_dict['startingPoints'] = startingPoints
+    context_dict['endingPoints'] = endingPoints
+    context_dict['next'] = nextAddress
+    context_dict['prev'] = prevAddress
+    context_dict['actionUrl'] = actionUrl
+    context_dict['month'] = monthNumber
+    context_dict['currentDay'] = int(currentDay)
+    context_dict['year'] = year + 2000
+    user = request.user
+    is_teen = True
+    if(user.User.isTeenager):
+        teen = user.User
+    else:
+        teen = UserProfile.objects.filter(parent=user)[0]
+        is_teen = False
+
+    emo_scores = get_monthly_emo_scores(range(UncutDaysInMonth), context_dict['year'], monthNumber, teen.user)
+    print emo_scores
+    leftOver_list = []
+    daysInMonth_list = []
+    for day in context_dict['leftOver']:
+        leftOver_list.append(dict(day=day, pic=emo_scores[day-1].get("pic")))
+    for day in context_dict['daysInMonth']:
+        daysInMonth_list.append(dict(day=day, pic=emo_scores[day-1].get("pic")))
+    context_dict["daysInMonth_list"] = daysInMonth_list
+    context_dict["leftOver_list"] = leftOver_list
+
+    context_dict["is_teen"] = emo_scores
+    context_dict["emo_scores"] = is_teen
+    return render(request, 'calendar.html', context_dict)
+
+def get_monthly_emo_scores(daysinmonth, year, month, owner):
+
+    monthly_emo = []
+    date = str(year)+"-"+str(month)
+
+    for i in daysinmonth:
+        monthly_emo.append(0)
+    print daysinmonth
+    for i in daysinmonth:
+        if(i < 10):
+           daily_emo = Texts.objects.filter(owner=owner, date__contains=date+"-0"+str(i+1))
+           fb_daily_emo = FbPosts.objects.filter(owner=owner, date_created__contains=date+"-0"+str(i+1))
+        else:
+           daily_emo = Texts.objects.filter(owner=owner, date__contains=date+"-"+str(i+1))
+           fb_daily_emo = FbPosts.objects.filter(owner=owner, date_created__contains=date+"-"+str(i+1))
+
+        for score in daily_emo:
+           monthly_emo[i] += score.emo_score
+
+        for score in fb_daily_emo:
+           monthly_emo[i] += score.emo_score
+
+    expressions = []
+    for i in daysinmonth:
+        if(monthly_emo[i] > 0 ):
+           expressions.append(dict(score=monthly_emo[i], pic="/static/smiley.jpg/"))
+        if(monthly_emo[i] == 0 ):
+           expressions.append(dict(score=monthly_emo[i], pic="/static/neutral.jpg/"))
+        if(monthly_emo[i] < 0 ):
+           expressions.append(dict(score=monthly_emo[i], pic="/static/sad.jpg/"))
+    return expressions
 
 def calendar_wp(request, Date):
     monthNumber = int(string.split(Date, "-")[0])
@@ -1231,16 +1489,24 @@ def calendar_wp(request, Date):
     startingPoints = [secondWkSp, secondWkSp+7, secondWkSp+14, secondWkSp+21]
     endingPoints = [secondWkSp+6, secondWkSp+13, secondWkSp+20, secondWkSp+27]
     actionUrl = "/CD9/Calendar/" + str(monthNumber) + "-" + str(year) +"/"
-    context_dictionary = {'monthstr':month, 'yearstr':year, 'fstDayOfMonth':range(fstDayOfMonth+1), 'daysInMonth':daysInMonth}
-    context_dictionary['leftOver'] = range(secondWkSp)[1:]
-    context_dictionary['startingPoints'] = startingPoints
-    context_dictionary['endingPoints'] = endingPoints
-    context_dictionary['next'] = nextAddress
-    context_dictionary['prev'] = prevAddress
-    context_dictionary['actionUrl'] = actionUrl
-    context_dictionary['month'] = monthNumber
-    context_dictionary['year'] = year + 2000
-    return render(request, 'calendar.html', context_dictionary)
+    context_dict = {'monthstr':month, 'yearstr':year, 'fstDayOfMonth':range(fstDayOfMonth+1), 'daysInMonth':daysInMonth}
+    context_dict['leftOver'] = range(secondWkSp)[1:]
+    context_dict['startingPoints'] = startingPoints
+    context_dict['endingPoints'] = endingPoints
+    context_dict['next'] = nextAddress
+    context_dict['prev'] = prevAddress
+    context_dict['actionUrl'] = actionUrl
+    context_dict['month'] = monthNumber
+    context_dict['year'] = year + 2000
+    user = request.user
+    is_teen = True
+    if(user.User.isTeenager):
+        teen = user.User
+    else:
+        teen = UserProfile.objects.filter(parent=user)[0]
+        is_teen = False
+    context_dict["is_teen"] = is_teen
+    return render(request, 'calendar.html', context_dict)
 
 def processAllData(request):
 
@@ -1293,5 +1559,107 @@ def loginUser(request):
     # This scenario would most likely be a HTTP GET.
     else:
         # No context variables to pass to the template system, hence the
-        # blank dictionary object...
+        # blank dictionaries object...
         return render(request, 'login.html', {})
+
+class address:
+    def __init__(self, name, to_text_count, from_text_count, date):
+        self.name = name
+        self.to_text_count = to_text_count
+        self.from_text_count = from_text_count
+        self.date = date
+
+def total_interactions(request):
+    context_dict = {"name":request.user.username}
+
+    user = request.user
+    if (user.User.isTeenager):
+        teen = user.User
+    else:
+        teen = UserProfile.objects.filter(parent=user)[0]
+
+    context_dict["teen"] = teen
+
+    context_dict["call_log_list"] = Phone_Calls.objects.filter(owner=teen.user)
+    print len(context_dict)
+    log_list = context_dict["call_log_list"]
+
+    print len(log_list)
+
+    for i in context_dict["call_log_list"]:
+        if i.contact == "Unknown":
+            print "this is null"
+        else:
+            print i.contact
+
+
+    context_dict["text_list"] = Texts.objects.filter(owner=teen.user)
+    text_list = context_dict["text_list"]
+
+    print len(text_list)
+
+    # loop through the texts, if there is no associated contact, get the address
+    context_dict["text_address_list_to"] = []
+    context_dict["text_address_list_from"] = []
+
+    addresses = []
+    address_dict = {}
+    myaddress = address(0,0,0,0)
+
+
+
+    # need address object
+
+
+    for i in text_list:
+
+        # if text is sent from teen
+        if i.text_type == 2 or i.text_type == 5:
+
+            # if there is no name association with the text
+            if i.contact is None:
+                myaddress.name = str(i.number)
+            else:
+                myaddress.name = i.contact
+
+
+
+            if myaddress.name in address_dict:
+                address_dict[myaddress.name].to_text_count += 1
+            else:
+                myaddress.to_text_count = 1
+                address_dict[myaddress.name] = myaddress
+                context_dict["text_address_list_to"].append(myaddress.name)
+
+                myaddress = address(0,0,0,0)
+
+
+
+
+        elif i.text_type == 1:
+            # if there is no name association with the text
+            if i.contact is None:
+                myaddress.name = str(i.number)
+            else:
+                myaddress.name = i.contact
+
+
+
+            if myaddress.name in address_dict:
+                address_dict[myaddress.name].from_text_count += 1
+            else:
+                myaddress.from_text_count = 1
+                address_dict[myaddress.name] = myaddress
+                context_dict["text_address_list_from"].append(myaddress.name)
+
+                myaddress = address(0,0,0,0)
+
+    #print(len(addresses))
+    context_dict["my_addresses"] = address_dict
+    for key, value in address_dict.iteritems():
+        print value.name, value.to_text_count
+
+    #print(len(context_dict["my_addresses"]))
+
+
+    return render(request, 'total_interactions.html', context_dict)

@@ -69,7 +69,6 @@ class Texts(models.Model):
     contact = models.CharField(max_length=100, null=True)
     active_monitoring = models.BooleanField(default=True)
 
-
 class Photo_Messages(models.Model):
     number = models.IntegerField()
     date = models.DateTimeField()
@@ -104,6 +103,11 @@ class UserProfile(models.Model):
     update_needed = models.BooleanField(default=False)
     gcm_reg_id = models.CharField(default='null', max_length=512)
     id = models.IntegerField(unique=True, primary_key=True)
+    websites_active_monitoring = models.BooleanField(default=True)
+    apps_active_monitoring = models.BooleanField(default=True)
+    calls_active_monitoring = models.BooleanField(default=True)
+    numbers_active_monitoring = models.BooleanField(default=True)
+    social_active_monitoring = models.BooleanField(default=True)
 
     def __unicode__(self):
         return self.user.username

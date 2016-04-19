@@ -3,6 +3,12 @@
 <!-- Extended data for the header -->
 {% block header %}
 <link rel="stylesheet" href="{{STATIC_URL}}css/calendar.css">
+<style>
+.smiley{
+    max-width: 50%;
+    max-height: 50%;
+}
+</style>
 {% endblock %}
 
 <!-- Extended data for the title -->
@@ -46,7 +52,7 @@ Emotional Analysis Calendar
                     {% for i in leftOver %}
                             <td class="day" >
                                 {{ i }}
-                                happy face !
+
                             </td>
                     {% endfor %}
                 </tr>
@@ -55,18 +61,18 @@ Emotional Analysis Calendar
                             <tr>
                                 <td class="day">
                                     {{ day }}
-                                    happy face !
+
                                 </td>
                         {% elif day == endingPoints.0 or day == endingPoints.1 or day == endingPoints.2 or day == endingPoints.3%}
                                 <td class="day" >
                                     {{ day }}
-                                    happy face !
+
                                 </td>
                             </tr>
                         {% else  %}
                                 <td class="day" >
                                     {{ day }}
-                                    happy face !
+
                                 </td>
                         {% endif %}
                     {% endfor %}

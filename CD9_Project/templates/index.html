@@ -3,20 +3,65 @@
 <!-- Extended data for the header -->
 {% block header %}
 
-<script>
-$(document).ready(function() {
-$('#app_table').DataTable();
-} );
-</script>
- <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/1.0.2/Chart.js"> </script>
- <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.9.0/jquery.min.js"></script>
+
+
+
+ <link rel="stylesheet" href="https://cdn.datatables.net/1.10.11/css/dataTables.bootstrap.min.css">
+ <link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css">
+<link rel="stylesheet" href="{{STATIC_URL}}css/calendar.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/1.0.2/Chart.js"> </script>
+  <script src="http://code.jquery.com/jquery-1.12.0.min.js"></script>
  <script src="https://cdn.datatables.net/1.10.11/js/jquery.dataTables.min.js"> </script>
  <script src="https://cdn.datatables.net/1.10.11/js/dataTables.bootstrap.min.js"></script>
- <script src="ode.jquery.com/jquery-1.12.0.min.js"></script>
- <link rel="stylesheet" href="https://cdn.datatables.net/1.10.11/css/dataTables.bootstrap.min.css">
- <link rel="stylesheet" href="maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css">
-<link rel="stylesheet" href="{{STATIC_URL}}css/calendar.css">
+
+ <script type="text/javascript">
+     var website_data_pie = {{web_json}};
+
+     var alert_data_pie = {{ alert_json }};
+
+     var dataPie = [
+         {
+             value: 60,
+             color: "#F7464A",
+             highlight: "#FF5A5E",
+             label: "Porn"
+         },
+         {
+             value: 20,
+             color: "#46BFBD",
+             highlight: "#5AD3D1",
+             label: "New Apps"
+         },
+         {
+             value: 10,
+             color: "#46BFBD",
+             highlight: "#5AD3D1",
+             label: "New contact"
+         },
+         {
+             value: 10,
+             color: "#FDB45C",
+             highlight: "#FFC870",
+             label: "Yellow"
+         }
+     ];
+ </script>
+
+<script>
+/*$(document).ready(function()
+	{
+		$('#app_table').DataTable();
+	}
+);
+*/
+</script>
+
 <style>
+
+.smiley{
+    max-width: 50%;
+    max-height: 50%;
+}
 
 .table-wrapper {
   overflow-x: scroll;
@@ -177,22 +222,32 @@ th, td {
 {% endblock %}
 
 {% block box_title_alerts %}
-    Alert Overview
+    Alert Overview Percentage
 {% endblock %}
 <!-- Extended data for the app body -->
 {% block body_alerts %}
+{% if alerts %}
+<script> $ = jQuery; </script>
     <a href="/CD9/alert_overview/" class="fill-div center-block" target="_blank">
       <canvas class="chart-canvas" id="alert-catagory-graph" width="300" height="300" style=""></canvas>
     </a>
+{% else %}
+    <h3> Currently No Alert Data !</h3>
+{% endif %}
 {% endblock %}
 
 {% block box_title_sites %}
-    Websites Overview
+    Websites Overview Percentage
 {% endblock %}
 
 <!-- Extended data for the app body portion -->
 {% block body_sites %}
-    <canvas class="chart-canvas" id="app-catagory-graph" width="300" height="300" style=""></canvas>
+    {% if sites %}
+    <script> $ = jQuery; </script>
+        <canvas class="chart-canvas" id="site-catagory-graph" width="300" height="300" style=""></canvas>
+    {% else %}
+        <h3> Currently No Website Data !</h3>
+    {% endif %}
 {% endblock %}
 
 <!-- Extended data for the app usage title  portion -->
@@ -205,7 +260,6 @@ th, td {
 <thead>
 <tr>
   <th>App Name</th>
-  <th>App Link</th>
   <th>Market Link</th>
   <th>Install Date</th>
   <th>Content Rating</th>
@@ -214,9 +268,8 @@ th, td {
 <tbody>
 {% for app in app_list %}
 <tr>
-  <td>{{app.appName}}</td>
-  <td>{{app.siteLink}}</td>
-  <td>{{app.marketUrl}}</td>
+  <td><a href="/CD9/app_detail/{{app.id}}/"> {{app.appName}} </a></td>
+  <td><a href="{{app.marketUrl}}"> {{app.marketUrl}}</a></td>
   <td>{{app.installDate}}</td>
   <td>{{app.contentRating}}</td>
 </tr>
@@ -254,30 +307,38 @@ th, td {
                     {% for i in fstDayOfMonth%}
                         <td class="nil"  ></td>
                     {% endfor %}
-                    {% for i in leftOver %}
+                    {% for i in leftOver_list %}
                             <td class="day" >
-                                {{ i }}
-                                happy face !
+                                {{ i.day }}
+                                {% if day.day <= currentDay %}
+                                <img class="smiley" src ={{i.pic}}>
+                                {% endif %}
                             </td>
                     {% endfor %}
                 </tr>
-                    {% for day in daysInMonth %}
-                        {% if day == startingPoints.0 or day == startingPoints.1 or day == startingPoints.2 or day == startingPoints.3%}
-                            <tr>
-                                <td class="day">
-                                    {{ day }}
-                                    happy face !
-                                </td>
-                        {% elif day == endingPoints.0 or day == endingPoints.1 or day == endingPoints.2 or day == endingPoints.3%}
+                {% for day in daysInMonth_list %}
+                   {% if day.day == startingPoints.0 or day.day == startingPoints.1 or day.day == startingPoints.2 or day.day == startingPoints.3%}
+                       <tr>
+                           <td class="day">
+                               {{ day.day }}
+                               {% if day.day <= currentDay %}
+<img class="smiley" src ={{day.pic}}>
+{% endif %}
+                           </td>
+                        {% elif day.day == endingPoints.0 or day.day == endingPoints.1 or day.day == endingPoints.2 or day.day == endingPoints.3%}
                                 <td class="day" >
-                                    {{ day }}
-                                    happy face !
+                                  {{ day.day }}
+                                  {% if day.day <= currentDay %}
+<img class="smiley" src ={{day.pic}}>
+{% endif %}
                                 </td>
                             </tr>
                         {% else  %}
                                 <td class="day" >
-                                    {{ day }}
-                                    happy face !
+                                  {{ day.day }}
+                                  {% if day.day <= currentDay %}
+<img class="smiley" src ={{day.pic}}>
+{% endif %}
                                 </td>
                         {% endif %}
                     {% endfor %}
@@ -286,45 +347,28 @@ th, td {
         </div>
 {% endblock  %}
 
-{% block box_title_interactions %} <span id=name>{{teen}}'s Interactions</span> {% endblock %}
+{% block box_title_interactions %} <span id=name>{{teen}} Interaction Percentage</span> {% endblock %}
 
 {% block body_interactions %}
-<a href="/CD9/total_interactions/">
-<canvas class="chart-canvas" id="interactions-graph" width="300" height="300" style=""></canvas>
-</a>
+  {% if web_json %}
+    <script> $ = jQuery; </script>
+    <a href="/CD9/total_interactions/">
+    <canvas class="chart-canvas" id="interactions-graph" width="300" height="300" style=""></canvas>
+    </a>
+  {% else %}
+    <h3> Currently No Website Data !</h3>
+{% endif %}
 {% endblock  %}
 
 {% block footer %}
+
+
+
 <script>
-var dataPie = [
-    {
-        value: 60,
-        color: "#F7464A",
-        highlight: "#FF5A5E",
-        label: "Porn"
-    },
-    {
-        value: 20,
-        color: "#46BFBD",
-        highlight: "#5AD3D1",
-        label: "New Apps"
-    },
-    {
-        value: 10,
-        color: "#46BFBD",
-        highlight: "#5AD3D1",
-        label: "New contact"
-    },
-    {
-        value: 10,
-        color: "#FDB45C",
-        highlight: "#FFC870",
-        label: "Yellow"
-    }
-];
 
 var optionsPie =
     {
+
         tooltipEvents: [],
 
         showTooltips: true,
@@ -363,13 +407,34 @@ var optionsPie =
     };
 
     //var alertContext = document.getElementById("alert-catagory-graph").getContext("2d");
-    var appContext = document.getElementById("interactions-graph").getContext("2d");
+    var appContext1 = document.getElementById("interactions-graph").getContext("2d");
     // For a pie chart
-    var myAlertPieChart = new Chart(appContext).Pie(dataPie,optionsPie);
+    var myInteractionsAlertPieChart = new Chart(appContext1).Pie(dataPie,optionsPie);
 
+    //var alertContext = document.getElementById("alert-catagory-graph").getContext("2d");
+    var appContext2 = document.getElementById("site-catagory-graph").getContext("2d");
+    // For a pie chart
+    var myAppAlertPieChart = new Chart(appContext2).Pie(website_data_pie,optionsPie);
+
+    var alertContext3 = document.getElementById("alert-catagory-graph").getContext("2d");
+    //var appContext = document.getElementById("site-catagory-graph").getContext("2d");
+    // For a pie chart
+    var mySiteAlertPieChart = new Chart(alertContext3).Pie(alert_data_pie,optionsPie);
 
 
 </script>
-<script src="{{STATIC_URL}}AlertPieGraph.js"></script>
-<script src="{{STATIC_URL}}AppPieGraph.js"></script>
+
+<script type="text/javascript">
+    $('#app_table').DataTable();
+</script>
+
+
+{% endblock %}
+
+{% block role %}
+  {% if is_teen %}
+    <p> Teen </p>
+  {% else %}
+    <P> Concerned Parent</p>
+  {% endif %}
 {% endblock %}

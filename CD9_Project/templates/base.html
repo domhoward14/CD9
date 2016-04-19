@@ -55,7 +55,13 @@
               <img src="{{STATIC_URL}}dist/img/anonymous_pic.jpeg" class="img-circle" alt="User Image">
             </div>
             <div class="pull-left info">
-              <p>Concerned Parent</p>
+              {% block role %}
+                {% if is_teen %}
+                  <p> Teen </p>
+                {% else %}
+                  <P> Concerned Parent</p>
+                {% endif %}
+              {% endblock %}
             </div>
           </div>
           <!-- sidebar menu: : style can be found in sidebar.less -->

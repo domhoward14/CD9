@@ -55,7 +55,7 @@
               <img src="{{STATIC_URL}}dist/img/anonymous_pic.jpeg" class="img-circle" alt="User Image">
             </div>
             <div class="pull-left info">
-              <p>Concerned Parent</p>
+              {% block role %}  {% endblock %}
             </div>
           </div>
           <!-- sidebar menu: : style can be found in sidebar.less -->
@@ -335,8 +335,7 @@
       <div class="control-sidebar-bg"></div>
     </div><!-- ./wrapper -->
 
-    <!-- jQuery 2.1.4 -->
-    <script src="{{STATIC_URL}}plugins/jQuery/jQuery-2.1.4.min.js"></script>
+
     <!-- Bootstrap 3.3.5 -->
     <script src="{{STATIC_URL}}bootstrap/js/bootstrap.min.js"></script>
     <!-- SlimScroll -->

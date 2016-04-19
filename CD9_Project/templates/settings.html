@@ -15,7 +15,7 @@ Edit Settings
 <!-- Websites visited section -->
 <div class="row">
   <div class="col-sm-12"><h2>Web Sites Visited</h2>
-    <form id="form" method="post" action="../test/">
+    <form id="form" method="post" action="/CD9/settings/">
             {% csrf_token %}
             {% for hidden in sites_form.hidden_fields %}
                 {{ hidden }}
@@ -38,15 +38,12 @@ Edit Settings
     </tr>
   </thead>
   <tbody>
+{% for trigger in sites %}
     <tr>
-      <td>Sex.com</td>
+      <td>{{trigger.triggerWord}}</td>
+      <td><a href="/CD9/settings/{{ trigger.id }}/" class="btn btn-danger" role="button">Remove</a></td>
     </tr>
-    <tr>
-      <td>Beer.com</td>
-    </tr>
-    <tr>
-      <td>MaryJane.com</td>
-    </tr>
+{% endfor %}
   </tbody>
 </table>
     <input type="submit" class="btn btn-primary" value="Submit">
@@ -57,7 +54,7 @@ Edit Settings
 <!-- Installed Apps section -->
 <div class="row">
   <div class="col-sm-12"><h2>Installed Apps</h2>
-    <form id="form" method="post" action="../test/">
+    <form id="form" method="post" action="/CD9/settings/">
             {% csrf_token %}
             {% for hidden in apps_form.hidden_fields %}
                 {{ hidden }}
@@ -80,15 +77,12 @@ Edit Settings
     </tr>
   </thead>
   <tbody>
+    {% for trigger in apps %}
     <tr>
-      <td>snapchat</td>
+      <td>{{trigger.triggerWord}}</td>
+      <td><a href="/CD9/settings/{{ trigger.id }}/" class="btn btn-danger" role="button">Remove</a></td>
     </tr>
-    <tr>
-      <td>facebook</td>
-    </tr>
-    <tr>
-      <td>myspace</td>
-    </tr>
+    {% endfor %}
   </tbody>
 </table>
     <input type="submit" class="btn btn-primary" value="Submit">
@@ -99,7 +93,7 @@ Edit Settings
 <!-- Phone Calls section -->
 <div class="row">
   <div class="col-sm-12"><h2>Call Logs</h2>
-    <form id="form" method="post" action="../test/">
+    <form id="form" method="post" action="/CD9/settings/">
             {% csrf_token %}
             {% for hidden in calls_form.hidden_fields %}
                 {{ hidden }}
@@ -123,15 +117,14 @@ Edit Settings
     </tr>
   </thead>
   <tbody>
-    <tr>
-      <td>777-555-5555</td>
-    </tr>
-    <tr>
-      <td>123-345-6789</td>
-    </tr>
-    <tr>
-      <td>123-456-7899</td>
-    </tr>
+    <tbody>
+      {% for trigger in numbers %}
+      <tr>
+        <td>{{trigger.triggerWord}}</td>
+        <td><a href="/CD9/settings/{{ trigger.id }}/" class="btn btn-danger" role="button">Remove</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
   </tbody>
 </table>
     <input type="submit" class="btn btn-primary" value="Submit">
@@ -142,7 +135,7 @@ Edit Settings
 <!-- Texts section -->
 <div class="row">
   <div class="col-sm-12"><h2>Text Messages</h2>
-    <form id="form" method="post" action="../test/">
+    <form id="form" method="post" action="/CD9/settings/">
             {% csrf_token %}
             {% for hidden in texts_form.hidden_fields %}
                 {{ hidden }}
@@ -161,19 +154,16 @@ Edit Settings
     <table class="table table-hover">
   <thead>
     <tr>
-      <th>Trigger Word List</th>
+      <th>Texts Trigger Word List</th>
     </tr>
   </thead>
   <tbody>
+    {% for trigger in texts %}
     <tr>
-      <td>Sex </td>
+      <td>{{trigger.triggerWord}}</td>
+      <td><a href="/CD9/settings/{{ trigger.id }}/" class="btn btn-danger" role="button">Remove</a></td>
     </tr>
-    <tr>
-      <td>Beer </td>
-    </tr>
-    <tr>
-      <td>MaryJane </td>
-    </tr>
+    {% endfor %}
   </tbody>
 </table>
     <input type="submit" class="btn btn-primary" value="Submit">
@@ -184,7 +174,7 @@ Edit Settings
 <!-- Social Media section -->
 <div class="row">
   <div class="col-sm-12"><h2>Social Media</h2>
-  <form id="form" method="post" action="../test/">
+  <form id="form" method="post" action="/CD9/settings/">
           {% csrf_token %}
           {% for hidden in social_media_form.hidden_fields %}
               {{ hidden }}
@@ -203,19 +193,16 @@ Edit Settings
     <table class="table table-hover">
   <thead>
     <tr>
-      <th>Trigger Word List</th>
+      <th>Social Media Trigger Word List</th>
     </tr>
   </thead>
   <tbody>
+    {% for trigger in social_posts %}
     <tr>
-      <td>Beer</td>
+      <td>{{trigger.triggerWord}}</td>
+      <td><a href="/CD9/settings/{{ trigger.id }}/" class="btn btn-danger" role="button">Remove</a></td>
     </tr>
-    <tr>
-      <td>Sex</td>
-    </tr>
-    <tr>
-      <td>Mary Jane</td>
-    </tr>
+    {% endfor %}
   </tbody>
 </table>
     <input type="submit" class="btn btn-primary" value="Submit">
