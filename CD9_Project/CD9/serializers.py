@@ -38,7 +38,7 @@ class AppSerializer(serializers.ModelSerializer):
 class PhoneCallSerializer(serializers.ModelSerializer):
     class Meta:
         model = Phone_Calls
-        fields = ('number', 'convoTime', 'date')
+        fields = ('number', 'convoTime', 'date', 'call_type')
 
 class PhotoMessagesSerializer(serializers.ModelSerializer):
     class Meta:

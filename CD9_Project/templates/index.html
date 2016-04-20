@@ -350,14 +350,53 @@ th, td {
 {% block box_title_interactions %} <span id=name>{{teen}} Interaction Percentage</span> {% endblock %}
 
 {% block body_interactions %}
-  {% if web_json %}
-    <script> $ = jQuery; </script>
-    <a href="/CD9/total_interactions/">
-    <canvas class="chart-canvas" id="interactions-graph" width="300" height="300" style=""></canvas>
-    </a>
-  {% else %}
-    <h3> Currently No Website Data !</h3>
-{% endif %}
+<div class="col-lg-6">
+  <h3> Messages From {{teen}}</h3>
+  <table class="table table-hover">
+    <thead>
+      <tr>
+        <th>Recipient</th>
+        <th># of Texts</th>
+        <th># of Social Media Posts</th>
+      </tr>
+    </thead>
+    <tbody>
+
+      {% for key, value in my_addresses.iteritems %}
+
+      <tr>
+        <td>{{value.name}}</td>
+        <td>{{value.to_text_count}}</td>
+        <td>0</td>
+      </tr>
+
+      {% endfor %}
+    </tbody>
+    </table>
+</div>
+
+<div class="col-lg-6">
+<h3> Messages To {{teen}}</h3>
+<table class="table table-hover">
+  <thead>
+    <tr>
+      <th>Sender</th>
+      <th># of Texts</th>
+      <th># of Social Media Posts</th>
+    </tr>
+  </thead>
+  <tbody>
+   {% for key, value in my_from_addresses.iteritems %}
+    <tr>
+      <td>{{value.name}}</td>
+      <td>{{value.from_text_count}}</td>
+      <td>0</td>
+    </tr>
+    {% endfor %}
+
+  </tbody>
+  </table>
+</div>
 {% endblock  %}
 
 {% block footer %}
@@ -405,11 +444,6 @@ var optionsPie =
         legendTemplate : "<ul class=\"<\%=name.toLowerCase()\%>-legend\"><\% for (var i=0; i<segments.length; i++){\%><li><span style=\"background-color:<\%=segments[i].fillColor\%>\"></span><\%if(segments[i].label){\%><\%=segments[i].label\%><\%}\%></li><\%}\%></ul>"
 
     };
-
-    //var alertContext = document.getElementById("alert-catagory-graph").getContext("2d");
-    var appContext1 = document.getElementById("interactions-graph").getContext("2d");
-    // For a pie chart
-    var myInteractionsAlertPieChart = new Chart(appContext1).Pie(dataPie,optionsPie);
 
     //var alertContext = document.getElementById("alert-catagory-graph").getContext("2d");
     var appContext2 = document.getElementById("site-catagory-graph").getContext("2d");

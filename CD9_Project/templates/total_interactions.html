@@ -34,40 +34,28 @@
     </table>
 </div>
 
-  <div class="col-sm-6">
-    <h3> Messages To {{teen}}</h3>
-    <table class="table table-hover">
-      <thead>
-        <tr>
-          <th>Sender</th>
-          <th># of Texts</th>
-          <th># of Social Media Posts</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>Mike</td>
-          <td>33</td>
-          <td>0</td>
-        </tr>
-        <tr>
-          <td>Bobby</td>
-          <td>33</td>
-          <td>0</td>
-        </tr>
-        <tr>
-          <td>jimmy</td>
-          <td>33</td>
-          <td>0</td>
-        </tr>
-        <tr>
-          <td>timmy</td>
-          <td>33</td>
-          <td>0</td>
-        </tr>
-      </tbody>
-      </table>
-  </div>
+<div class="col-sm-6">
+<h3> Messages To {{teen}}</h3>
+<table class="table table-hover">
+  <thead>
+    <tr>
+      <th>Sender</th>
+      <th># of Texts</th>
+      <th># of Social Media Posts</th>
+    </tr>
+  </thead>
+  <tbody>
+   {% for key, value in my_from_addresses.iteritems %}
+    <tr>
+      <td>{{value.name}}</td>
+      <td>{{value.from_text_count}}</td>
+      <td>0</td>
+    </tr>
+    {% endfor %}
+
+  </tbody>
+  </table>
+</div>
 {% endblock %}
 
 <!-- Extended data for the medium body portion -->

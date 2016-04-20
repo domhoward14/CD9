@@ -199,6 +199,143 @@ def index(request,alert_id=""):
         context_dict["first_alert"] = alert_list[0]
         context_dict["alert_list"] = alert_list
     context_dict["alert_range"] = range(context_dict["alert_count"] + 1)[1:]
+
+    context_dict["call_log_list"] = Phone_Calls.objects.filter(owner=teen.user)
+    print len(context_dict)
+    log_list = context_dict["call_log_list"]
+
+
+    print len(log_list)
+
+    for i in context_dict["call_log_list"]:
+        if i.contact == "Unknown":
+            print "this is null"
+        else:
+            print i.contact
+
+
+    context_dict["text_list"] = Texts.objects.filter(owner=teen.user)
+    context_dict["social_media_list"] = FbPosts.objects.filter(owner=teen.user)
+    context_dict["call_logs_list"] = Phone_Calls.objects.filter(owner=teen.user)
+
+    text_list = context_dict["text_list"]
+    social_media_list = context_dict["social_media_list"]
+    call_logs_list = context_dict["call_logs_list"]
+
+    print len(text_list)
+
+    # loop through the texts, if there is no associated contact, get the address
+    context_dict["text_address_list_to"] = []
+    context_dict["text_address_list_from"] = []
+
+    addresses = []
+    address_dict = {}
+    myaddress = address(0,0,0,0,0,0,0)
+    address_dict_from = {}
+
+    # need address object
+
+#parsing the text list
+    for i in text_list:
+
+        print i.contact
+        # if text is sent from teen
+        if i.text_type == 2 or i.text_type == 5:
+            myaddress = address(0,0,0,0,0,0,0)
+
+            # if there is no name association with the text
+            if i.contact is None:
+                myaddress.name = str(i.number)
+            else:
+                myaddress.name = i.contact
+
+            if myaddress.name in address_dict:
+                address_dict[myaddress.name].to_text_count += 1
+            else:
+                myaddress.to_text_count = 1
+                address_dict[myaddress.name] = myaddress
+
+        elif i.text_type == 1:
+            myaddress = address(0,0,0,0,0,0,0)
+
+            if i.contact is None:
+                myaddress.name = str(i.number)
+            else:
+                myaddress.name = i.contact
+
+            if myaddress.name in address_dict_from:
+                address_dict_from[myaddress.name].from_text_count += 1
+            else:
+                myaddress.from_text_count=1
+                address_dict_from[myaddress.name] = myaddress
+
+#parsing the social_media_list
+    for i in social_media_list:
+
+        print i.creator
+        # if Post is not sent from teen
+        if user.username != i.creator:
+            myaddress = address(0,0,0,0,0,0,0)
+
+            # if there is no name association with the text
+            myaddress.name = i.creator
+
+            if myaddress.name in address_dict:
+                address_dict[myaddress.name].to_social_count += 1
+            else:
+                myaddress.to_social_count = 1
+                address_dict[myaddress.name] = myaddress
+
+#parsing the call_log list
+    for i in call_logs_list:
+        print i.contact
+        # if call is sent from teen
+        if i.call_type == str(2):
+            myaddress = address(0,0,0,0,0,0,0)
+
+            # if there is no name association with the text
+            if i.contact.lower() == "unknown":
+                print "this call is by unknown "
+                myaddress.name = str(i.number)
+            else:
+                myaddress.name = i.contact
+
+            if myaddress.name in address_dict:
+                address_dict[myaddress.name].to_call_count += 1
+            else:
+                myaddress.to_call_count = 1
+                address_dict[myaddress.name] = myaddress
+
+        elif i.call_type == str(1):
+            myaddress = address(0,0,0,0,0,0,0)
+
+            if i.contact.lower() == "unknown":
+                myaddress.name = str(i.number)
+            else:
+                myaddress.name = i.contact
+
+            if myaddress.name in address_dict_from:
+                address_dict_from[myaddress.name].from_call_count += 1
+            else:
+                myaddress.from_call_count=1
+                address_dict_from[myaddress.name] = myaddress
+
+    #print(len(addresses))
+    context_dict["my_addresses"] = address_dict
+    context_dict["my_from_addresses"] = address_dict_from
+    for key, value in address_dict.iteritems():
+        print "the text count is " + str(value.to_text_count)
+        print "the social count is " + str(value.to_social_count)
+        print "the call count is " + str(value.to_call_count)
+
+    for key, value in address_dict_from.iteritems():
+        print "the text count is " + str(value.from_text_count)
+        print "the call count is " + str(value.from_call_count)
+
+    print address_dict_from.viewkeys()
+    print ""
+    print address_dict_from.viewvalues()
+
     return render(request, 'index.html', context_dict)
 
 
@@ -1563,11 +1700,14 @@ def loginUser(request):
         return render(request, 'login.html', {})
 
 class address:
-    def __init__(self, name, to_text_count, from_text_count, date):
+    def __init__(self, name, to_text_count, from_text_count, date, from_call_count, to_call_count, to_social_count):
         self.name = name
         self.to_text_count = to_text_count
         self.from_text_count = from_text_count
         self.date = date
+        self.from_call_count = from_call_count
+        self.to_call_count = to_call_count
+        self.to_social_count = to_social_count
 
 def total_interactions(request):
     context_dict = {"name":request.user.username}
@@ -1604,8 +1744,8 @@ def total_interactions(request):
 
     addresses = []
     address_dict = {}
-    myaddress = address(0,0,0,0)
-
+    myaddress = address(0,0,0,0,0,0,0)
+    address_dict_from = {}
 
 
     # need address object
@@ -1615,14 +1755,13 @@ def total_interactions(request):
 
         # if text is sent from teen
         if i.text_type == 2 or i.text_type == 5:
+            myaddress = address(0,0,0,0,0,0,0)
 
             # if there is no name association with the text
             if i.contact is None:
                 myaddress.name = str(i.number)
             else:
                 myaddress.name = i.contact
-
-
 
             if myaddress.name in address_dict:
                 address_dict[myaddress.name].to_text_count += 1
@@ -1631,35 +1770,31 @@ def total_interactions(request):
                 address_dict[myaddress.name] = myaddress
                 context_dict["text_address_list_to"].append(myaddress.name)
 
-                myaddress = address(0,0,0,0)
-
-
-
+                myaddress = address(0,0,0,0,0,0,0)
 
         elif i.text_type == 1:
-            # if there is no name association with the text
+            myaddress = address(0,0,0,0,0,0,0)
+
             if i.contact is None:
                 myaddress.name = str(i.number)
             else:
                 myaddress.name = i.contact
 
-
-
-            if myaddress.name in address_dict:
-                address_dict[myaddress.name].from_text_count += 1
+            if myaddress.name in address_dict_from:
+                address_dict_from[myaddress.name].from_text_count += 1
             else:
-                myaddress.from_text_count = 1
-                address_dict[myaddress.name] = myaddress
-                context_dict["text_address_list_from"].append(myaddress.name)
+                myaddress.from_text_count=1
+                address_dict_from[myaddress.name] = myaddress
 
-                myaddress = address(0,0,0,0)
+
+
 
     #print(len(addresses))
     context_dict["my_addresses"] = address_dict
+    context_dict["my_from_addresses"] = address_dict_from
     for key, value in address_dict.iteritems():
         print value.name, value.to_text_count
 
     #print(len(context_dict["my_addresses"]))
-
 
     return render(request, 'total_interactions.html', context_dict)
