@@ -1,3 +1,4 @@
+
 {% extends 'index_base.html' %}
 
 <!-- Extended data for the header -->
@@ -13,11 +14,17 @@
   <script src="http://code.jquery.com/jquery-1.12.0.min.js"></script>
  <script src="https://cdn.datatables.net/1.10.11/js/jquery.dataTables.min.js"> </script>
  <script src="https://cdn.datatables.net/1.10.11/js/dataTables.bootstrap.min.js"></script>
+ <link src="https://cdn.datatables.net/responsive/2.0.2/css/responsive.dataTables.min.css"></link>
+ <script src="https://cdn.datatables.net/responsive/2.0.2/js/dataTables.responsive.min.js"></script>
+ <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.8.4/moment.min.js"></script>
+ <script src=https://cdn.datatables.net/plug-ins/1.10.11/sorting/datetime-moment.js></script>
 
  <script type="text/javascript">
      var website_data_pie = {{web_json}};
 
      var alert_data_pie = {{ alert_json }};
+
+     var interactions_to_data_pie = {{ interactions_to_json }};
 
      var dataPie = [
          {
@@ -57,6 +64,10 @@
 </script>
 
 <style>
+
+#teen_selection{
+  float:right;
+}
 
 .smiley{
     max-width: 50%;
@@ -115,7 +126,7 @@ th, td {
         width:25%;
         height:25%;
         min-width:40%;
-        min-height:40%;
+        min-height:25%;
         overflow:hidden;
         display:block;
         margin: auto;
@@ -133,7 +144,19 @@ th, td {
 
 {% block title %}
 <strong><h1 id=name>Hello {{name}} ! </strong><span class="badge" id="alert-badge"> {{alert_count}} </span></h1> <!-- put counter since last click for new alerts inside span!-->
-
+{% if is_teen == False %}
+    {% if parents_teens %}
+        <form id="teen_selection" method="post" action="/CD9/index/">
+          {% csrf_token %}
+          <select name="teen_id">
+                {% for teen in parents_teens %}
+                  <option value="{{teen.id}}">{{teen}}</option>
+                {% endfor %}
+          </select>
+          <input type="submit" class="btn btn-primary" value="Submit">
+        </form>
+    {% endif %}
+{% endif %}
 <div class="AlertContainer" >
     <!-- here begins the alert carousel -->
     <!-- New Alerts Shown Below: -->
@@ -250,9 +273,23 @@ th, td {
     {% endif %}
 {% endblock %}
 
-<!-- Extended data for the app usage title  portion -->
-{% block box_title_app_usage %} Installed Apps {% endblock %}
+{% block box_total_interactions %}
+    Total Interaction Overview
+{% endblock %}
 
+{% block total_interactions %}
+    {% if total_count %}
+    <script> $ = jQuery; </script>
+        <canvas class="chart-canvas" id="total_count-graph" width="300" height="300" style=""></canvas>
+    {% else %}
+        <h3> Currently No Interaction Data !</h3>
+    {% endif %}
+{% endblock %}
+
+<!-- Extended data for the app usage title  portion -->
+{% block box_title_app_usage %}
+    Installed Apps
+{% endblock %}
 <!-- Extended data for the app body portion -->
 {% block body_app_usage %}
 <div class="table-wrapper">
@@ -269,7 +306,7 @@ th, td {
 {% for app in app_list %}
 <tr>
   <td><a href="/CD9/app_detail/{{app.id}}/"> {{app.appName}} </a></td>
-  <td><a href="{{app.marketUrl}}"> {{app.marketUrl}}</a></td>
+  <td><a href="{{app.marketUrl}}"> Learn More</a></td>
   <td>{{app.installDate}}</td>
   <td>{{app.contentRating}}</td>
 </tr>
@@ -351,23 +388,27 @@ th, td {
 
 {% block body_interactions %}
 <div class="col-lg-6">
-  <h3> Messages From {{teen}}</h3>
-  <table class="table table-hover">
+  <h3> Messages To {{teen}}</h3>
+  <table class="table table-hover" id="interactions_table_to">
     <thead>
       <tr>
-        <th>Recipient</th>
-        <th># of Texts</th>
-        <th># of Social Media Posts</th>
+        <th >Sender</th>
+        <th>Date</th>
+        <th ># of Texts</th>
+        <th ># of Calls</th>
+        <th ># of Social Media Posts</th>
       </tr>
     </thead>
     <tbody>
 
-      {% for key, value in my_addresses.iteritems %}
+      {% for key, value in my_from_addresses.iteritems %}
 
       <tr>
         <td>{{value.name}}</td>
+        <td>{{value.date}}</td>
         <td>{{value.to_text_count}}</td>
-        <td>0</td>
+        <td>{{value.to_call_count}}</td>
+        <td>{{value.to_social_count}}</td>
       </tr>
 
       {% endfor %}
@@ -376,20 +417,24 @@ th, td {
 </div>
 
 <div class="col-lg-6">
-<h3> Messages To {{teen}}</h3>
-<table class="table table-hover">
+<h3> Messages From {{teen}}</h3>
+<table class="table table-hover" id="interactions_table_from">
   <thead>
     <tr>
-      <th>Sender</th>
+      <th>Recipient</th>
+      <th>Date</th>
       <th># of Texts</th>
+      <th># of Calls</th>
       <th># of Social Media Posts</th>
     </tr>
   </thead>
   <tbody>
-   {% for key, value in my_from_addresses.iteritems %}
+   {% for key, value in my_addresses.iteritems %}
     <tr>
       <td>{{value.name}}</td>
+      <td>{{value.date}}</td>
       <td>{{value.from_text_count}}</td>
+      <td>{{value.from_call_count}}</td>
       <td>0</td>
     </tr>
     {% endfor %}
@@ -407,14 +452,6 @@ th, td {
 
 var optionsPie =
     {
-
-        tooltipEvents: [],
-
-        showTooltips: true,
-
-        onAnimationComplete: function () {
-                this.showTooltip(this.segments, true);
-            },
 
         //Boolean - Whether we should show a stroke on each segment
         segmentShowStroke : true,
@@ -450,18 +487,29 @@ var optionsPie =
     // For a pie chart
     var myAppAlertPieChart = new Chart(appContext2).Pie(website_data_pie,optionsPie);
 
+    {% if alerts %}
     var alertContext3 = document.getElementById("alert-catagory-graph").getContext("2d");
     //var appContext = document.getElementById("site-catagory-graph").getContext("2d");
     // For a pie chart
     var mySiteAlertPieChart = new Chart(alertContext3).Pie(alert_data_pie,optionsPie);
+    {% endif %}
 
+    var alertContext4 = document.getElementById("total_count-graph").getContext("2d");
+    //var appContext = document.getElementById("site-catagory-graph").getContext("2d");
+    // For a pie chart
+    var mySiteAlertPieChart = new Chart(alertContext4).Pie(interactions_to_data_pie,optionsPie);
 
 </script>
 
 <script type="text/javascript">
-    $('#app_table').DataTable();
-</script>
 
+
+    $.fn.dataTable.moment( 'MM D, YYYY, h:mm a' );
+
+    $('#app_table').DataTable();
+    $('#interactions_table_to').DataTable({ scrollX:true });
+    $('#interactions_table_from').DataTable({  scrollX:true});
+</script>
 
 {% endblock %}
 

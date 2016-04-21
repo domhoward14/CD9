@@ -18,7 +18,7 @@ class UserSerializer(serializers.ModelSerializer):
 class TextSerializer(serializers.ModelSerializer):
     class Meta:
         model = Texts
-        fields = ('number', 'date', 'content', 'pk','text_type')
+        fields = ('number', 'date', 'content', 'pk','text_type', 'contact')
 
 class PingSerializer(serializers.ModelSerializer):
     class Meta:
@@ -38,7 +38,7 @@ class AppSerializer(serializers.ModelSerializer):
 class PhoneCallSerializer(serializers.ModelSerializer):
     class Meta:
         model = Phone_Calls
-        fields = ('number', 'convoTime', 'date', 'call_type')
+        fields = ('number', 'convoTime', 'date', 'call_type', 'contact')
 
 class PhotoMessagesSerializer(serializers.ModelSerializer):
     class Meta:

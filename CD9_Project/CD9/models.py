@@ -10,6 +10,7 @@ C_WEBSITES = 2
 C_NUMBER = 3
 C_FB = 4
 C_EMAIL = 5
+
 """
 update all of the models so that they are using the datetime field
 instead of the date field
@@ -31,6 +32,7 @@ class Flags(models.Model):
     triggerWord = models.CharField(max_length=100)
     dataType = models.IntegerField(default=6)
     owner = models.ForeignKey('auth.User', related_name='Flags')
+
 
 #may want to add screenshots when doing the web GUI
 class App_list(models.Model):
@@ -108,6 +110,7 @@ class UserProfile(models.Model):
     calls_active_monitoring = models.BooleanField(default=True)
     numbers_active_monitoring = models.BooleanField(default=True)
     social_active_monitoring = models.BooleanField(default=True)
+    text_active_monitoring = models.BooleanField(default=True)
 
     def __unicode__(self):
         return self.user.username

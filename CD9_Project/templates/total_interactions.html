@@ -3,7 +3,30 @@
 <!-- Extended data for the title -->
 {% block title %}
 <span id=name> All {{ teen }}'s Interactions </span>
+
+{% if is_teen == False %}
+    {% if parents_teens %}
+        <form id="teen_selection" method="post" action="/CD9/alert_overview/">
+          {% csrf_token %}
+          <select name="teen_id">
+                {% for teen in parents_teens %}
+                  <option value="{{teen.id}}">{{teen}}</option>
+                {% endfor %}
+          </select>
+          <input type="submit" class="btn btn-primary" value="Submit">
+        </form>
+    {% endif %}
+{% endif %}
+
 {% endblock %}
+
+{% block header %}
+<style>
+  #teen_selection{
+    float:right;
+  }
+</style>
+{% endblock  %}
 
 <!-- Extended data for the box title-->
 

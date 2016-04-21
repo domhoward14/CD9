@@ -1,8 +1,35 @@
 {% extends 'base.html' %}
 
+{% block header %}
+<style>
+  #teen_selection{
+    float:right;
+  }
+  #removal{
+    padding-left: 2%;
+  }
+
+</style>
+{% endblock  %}
+
+
 <!-- Extended data for the title -->
 {% block title %}
 Total Alert Overview
+
+{% if is_teen == False %}
+    {% if parents_teens %}
+        <form id="teen_selection" method="post" action="/CD9/alert_overview/">
+          {% csrf_token %}
+          <select name="teen_id">
+                {% for teen in parents_teens %}
+                  <option value="{{teen.id}}">{{teen}}</option>
+                {% endfor %}
+          </select>
+          <input type="submit" class="btn btn-primary" value="Submit">
+        </form>
+    {% endif %}
+{% endif %}
 {% endblock %}
 
 <!-- Extended data for the box title -->
@@ -19,39 +46,41 @@ Total Alert Overview
       <tr>
         <th>Type Of Alert</th>
         <th>Date Created</th>
+        <th>Acknowledged</th>
       </tr>
     </thead>
     <tbody>
       {% for alert in all_alerts %}
         <tr>
           {% if alert.type == 0 %}
-            <td><a href="/CD9/alert_details/{{ alert.id }}"></a> Texts </td>
-        <td>{{alert.date_created}}</td>
+            <td><a href="/CD9/alert_details/{{ alert.id }}">Texts</a>  </td>
+        <td>{{alert.date_created}}</td><td>{{alert.isProcessed}}</td>
+
           {% endif %}
 
             {% if alert.type == 1 %}
-              <td><a href="/CD9/alert_details/{{ alert.id }}"></a> Apps </td>
-          <td>{{alert.date_created}}</td>
+              <td><a href="/CD9/alert_details/{{ alert.id }}">Apps</a>  </td>
+          <td>{{alert.date_created}}</td><td>{{alert.isProcessed}}</td>
             {% endif %}
 
           {% if alert.type == 2 %}
-            <td><a href="/CD9/alert_details/{{ alert.id }}"></a> websites </td>
-        <td>{{alert.date_created}}</td>
+            <td><a href="/CD9/alert_details/{{ alert.id }}">websites</a>  </td>
+        <td>{{alert.date_created}}</td><td>{{alert.isProcessed}}</td>
           {% endif %}
 
         {% if alert.type == 3 %}
-          <td><a href="/CD9/alert_details/{{ alert.id }}"></a> Number </td>
-      <td>{{alert.date_created}}</td>
+          <td><a href="/CD9/alert_details/{{ alert.id }}">Number</a>  </td>
+      <td>{{alert.date_created}}</td><td>{{alert.isProcessed}}</td>
         {% endif %}
 
           {% if alert.type == 4 %}
-            <td><a href="/CD9/alert_details/{{ alert.id }}"></a> Social Media </td>
-        <td>{{alert.date_created}}</td>
+            <td><a href="/CD9/alert_details/{{ alert.id }}">Social Media</a>  </td>
+        <td>{{alert.date_created}}</td><td>{{alert.isProcessed}}</td>
           {% endif %}
 
         {% if alert.type == 5 %}
-          <td><a href="/CD9/alert_details/{{ alert.id }}"></a> Email </td>
-      <td>{{alert.date_created}}</td>
+          <td><a href="/CD9/alert_details/{{ alert.id }}">Email</a>  </td>
+      <td>{{alert.date_created}}</td><td>{{alert.isProcessed}}</td>
         {% endif %}
         </tr>
 
@@ -69,6 +98,14 @@ Total Alert Overview
 
 <!-- Extended data for the bottom body portion -->
 {% block bottom %}
+    {% if is_teen == False %}
+      {% if all_alerts %}
+          <form id="removal" method="post" action="/CD9/alert_overview/{{teen.id}}/">
+            {% csrf_token %}
+            <input type="submit" class="btn btn-danger" value="Clear All">
+          </form>
+      {% endif %}
+    {% endif %}
 {% endblock %}
 
 <!-- Extended data for the footer -->

@@ -101,6 +101,7 @@
           <h1>
             {% block title %}{% endblock %}
           </h1>
+
         </section>
 
         <!-- Main content -->
@@ -120,7 +121,7 @@
 
 
 
-              <div class="col-lg-6">
+              <div class="col-lg-4">
                 <!-- DIRECT CHAT -->
                 <div class="box ">
                   <div class="box-header with-border">
@@ -132,13 +133,28 @@
                 </div><!--/.direct-chat -->
               </div><!-- /.col -->
 
-              <div class="col-lg-6">
+              <div class="col-lg-4">
                 <div class="box ">
                   <div class="box-header with-border">
                     <h3 class="box-title aligned-header">{% block box_title_sites %} {% endblock %}</h3>
                   </div><!-- /.box-header -->
                   <div class="box-body">
-                      {% block body_sites %}{% endblock  %}
+                    <div class="row">
+                      <div class="col-lg-4">
+                          {% block body_sites %}{% endblock  %}
+                      </div><!-- /.box-col -->
+                    </div><!-- /.box-row -->
+                  </div><!-- /.box-body -->
+                </div><!--/.direct-chat -->
+              </div><!-- /.col -->
+
+              <div class="col-lg-4">
+                <div class="box ">
+                  <div class="box-header with-border">
+                    <h3 class="box-title aligned-header">{% block box_total_interactions %} {% endblock %}</h3>
+                  </div><!-- /.box-header -->
+                  <div class="box-body">
+                      {% block total_interactions %}{% endblock  %}
                   </div><!-- /.box-body -->
                 </div><!--/.direct-chat -->
               </div><!-- /.col -->

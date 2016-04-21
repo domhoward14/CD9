@@ -37,7 +37,7 @@ from django.contrib.auth.decorators import login_required
 import logging
 
 DATUM_KEY = "dc648e604c7cc671609af14835c73152"
-_42MATTERS_URL = "https://42matters.com/api/1/apps/query.json?access_token=1f7b56972f7786671c41c6ea5e2eb529ce001140"
+_42MATTERS_URL = "https://42matters.com/api/1/apps/query.json?access_token=538cc092cf6325f0c0c6d9ab27ead07c759a82b3"
 TEXT_ANALYZER_URL = "http://api.datumbox.com/1.0/TwitterSentimentAnalysis.json"
 TEXT_EXTRACTION_URL = "http://api.datumbox.com/1.0/TextExtraction.json"
 CATEGORY_URL = "http://api.datumbox.com/1.0/TopicClassification.json"
@@ -49,6 +49,7 @@ FB_TOKEN_EXTENDER_URL = "https://graph.facebook.com/oauth/access_token"
 FB_USER_NEWSFEED = "https://graph.facebook.com/me/feed"
 FB_ME = "https://graph.facebook.com/me"
 FB_GRAPH = "https://graph.facebook.com/"
+
 C_TEXTS = 0
 C_APPS = 1
 C_WEBSITES = 2
@@ -140,7 +141,8 @@ def test(request):
         context_dict['sites_form'] = SitesForm()
         return render(request, 'settings.html', context_dict)
 
-def alert_overview(request):
+def alert_overview(request, clear_id="null"):
+
     user = request.user
     is_teen = True
     if(user.User.isTeenager):
@@ -148,7 +150,19 @@ def alert_overview(request):
     else:
         teen = UserProfile.objects.filter(parent=user)[0]
         is_teen = False
+
+    if(request.method == "POST"):
+        teen_id = request.POST.get("teen_id")
+        if(teen_id):
+            print teen_id
+            teen = UserProfile.objects.get(id=teen_id)
+        elif(not clear_id=="null"):
+            clear_teen = UserProfile.objects.get(id=clear_id)
+            Alerts.objects.filter(teen=clear_teen).delete()
+
     context_dict = {'all_alerts': Alerts.objects.filter(teen=teen)}
+    parent = teen.parent
+    context_dict["parents_teens"] = UserProfile.objects.filter(parent=parent)
     context_dict["is_teen"] = is_teen
     context_dict["teen"] = teen
     return render(request, 'Alert_overview_table.html', context_dict)
@@ -167,11 +181,7 @@ def alert_processing(request, alert_id):
 
 
 @login_required
-def index(request,alert_id=""):
-    if(request.method == "POST"):
-        alert = Alerts.objects.get(id=alert_id)
-        alert.isProcessed = True
-        alert.save()
+def index(request, alert_id="null"):
     user = request.user
     is_teen = True
     if(user.User.isTeenager):
@@ -179,7 +189,23 @@ def index(request,alert_id=""):
     else:
         teen = UserProfile.objects.filter(parent=user)[0]
         is_teen = False
+
+    if(request.method == "POST"):
+        print "the alert is " + alert_id
+        if(not alert_id == "null"):
+            alert = Alerts.objects.get(id=alert_id)
+            alert.isProcessed = True
+            alert.save()
+        else:
+            teen_id = request.POST.get("teen_id")
+            if(teen_id):
+                print teen_id
+                teen = UserProfile.objects.get(id=teen_id)
+
+
     context_dict = addCalendar(teen)
+    parent = teen.parent
+    context_dict["parents_teens"] = UserProfile.objects.filter(parent=parent)
     context_dict["name"] = request.user.username
     sites = Web_History.objects.filter(owner = teen.user)
     alerts = Alerts.objects.filter(teen = teen)
@@ -201,28 +227,30 @@ def index(request,alert_id=""):
     context_dict["alert_range"] = range(context_dict["alert_count"] + 1)[1:]
 
     context_dict["call_log_list"] = Phone_Calls.objects.filter(owner=teen.user)
-    print len(context_dict)
+    #print len(context_dict)
     log_list = context_dict["call_log_list"]
 
 
-    print len(log_list)
+    #print len(log_list)
 
-    for i in context_dict["call_log_list"]:
-        if i.contact == "Unknown":
-            print "this is null"
-        else:
-            print i.contact
+    #for i in context_dict["call_log_list"]:
+        #if i.contact == "Unknown":
+        #    print "this is null"
+        #else:
+            #print i.contact
 
 
     context_dict["text_list"] = Texts.objects.filter(owner=teen.user)
     context_dict["social_media_list"] = FbPosts.objects.filter(owner=teen.user)
+    print "the social media list is "
+    print context_dict["social_media_list"]
     context_dict["call_logs_list"] = Phone_Calls.objects.filter(owner=teen.user)
 
     text_list = context_dict["text_list"]
     social_media_list = context_dict["social_media_list"]
     call_logs_list = context_dict["call_logs_list"]
 
-    print len(text_list)
+    #print len(text_list)
 
     # loop through the texts, if there is no associated contact, get the address
     context_dict["text_address_list_to"] = []
@@ -238,7 +266,7 @@ def index(request,alert_id=""):
 #parsing the text list
     for i in text_list:
 
-        print i.contact
+        #print i.contact
         # if text is sent from teen
         if i.text_type == 2 or i.text_type == 5:
             myaddress = address(0,0,0,0,0,0,0)
@@ -251,9 +279,13 @@ def index(request,alert_id=""):
 
             if myaddress.name in address_dict:
                 address_dict[myaddress.name].to_text_count += 1
+                if i.date > address_dict[myaddress.name].date:
+                    address_dict[myaddress.name].date = i.date
             else:
                 myaddress.to_text_count = 1
+                myaddress.date = i.date
                 address_dict[myaddress.name] = myaddress
+
 
         elif i.text_type == 1:
             myaddress = address(0,0,0,0,0,0,0)
@@ -265,14 +297,18 @@ def index(request,alert_id=""):
 
             if myaddress.name in address_dict_from:
                 address_dict_from[myaddress.name].from_text_count += 1
+                if i.date > address_dict_from[myaddress.name].date:
+                    address_dict_from[myaddress.name].date = i.date
             else:
                 myaddress.from_text_count=1
+                myaddress.date = i.date
                 address_dict_from[myaddress.name] = myaddress
 
 #parsing the social_media_list
     for i in social_media_list:
-
-        print i.creator
+        print "++++++++++++++++++++++++++++++++++++++++"
+        print "The username and the creator respectively are " + str(user.username) + str(i.creator)
+        print "++++++++++++++++++++++++++++++++++++++++"
         # if Post is not sent from teen
         if user.username != i.creator:
             myaddress = address(0,0,0,0,0,0,0)
@@ -282,28 +318,34 @@ def index(request,alert_id=""):
 
             if myaddress.name in address_dict:
                 address_dict[myaddress.name].to_social_count += 1
+                if i.date_created > address_dict[myaddress.name].date:
+                    address_dict[myaddress.name].date = i.date_created
             else:
                 myaddress.to_social_count = 1
+                myaddress.date = i.date_created
                 address_dict[myaddress.name] = myaddress
 
 #parsing the call_log list
     for i in call_logs_list:
-        print i.contact
+        #print i.contact
         # if call is sent from teen
         if i.call_type == str(2):
             myaddress = address(0,0,0,0,0,0,0)
 
             # if there is no name association with the text
             if i.contact.lower() == "unknown":
-                print "this call is by unknown "
+                #print "this call is by unknown "
                 myaddress.name = str(i.number)
             else:
                 myaddress.name = i.contact
 
             if myaddress.name in address_dict:
                 address_dict[myaddress.name].to_call_count += 1
+                if i.date > address_dict[myaddress.name].date:
+                    address_dict[myaddress.name].date = i.date
             else:
                 myaddress.to_call_count = 1
+                myaddress.date = i.date
                 address_dict[myaddress.name] = myaddress
 
         elif i.call_type == str(1):
@@ -316,26 +358,53 @@ def index(request,alert_id=""):
 
             if myaddress.name in address_dict_from:
                 address_dict_from[myaddress.name].from_call_count += 1
+                if i.date > address_dict_from[myaddress.name].date:
+                    address_dict_from[myaddress.name].date = i.date
             else:
                 myaddress.from_call_count=1
+                myaddress.date = i.date
                 address_dict_from[myaddress.name] = myaddress
+
+    t_count = 0
+    s_count = 0
+    c_count = 0
 
     #print(len(addresses))
     context_dict["my_addresses"] = address_dict
     context_dict["my_from_addresses"] = address_dict_from
+
     for key, value in address_dict.iteritems():
-        print "the text count is " + str(value.to_text_count)
-        print "the social count is " + str(value.to_social_count)
-        print "the call count is " + str(value.to_call_count)
+        #print "the text count is " + str(value.to_text_count)
+        #print "the social count is " + str(value.to_social_count)
+        #print "the call count is " + str(value.to_call_count)
 
+        # code for graph generation
+        t_count += value.to_text_count
+        s_count += value.to_social_count
+        c_count += value.to_call_count
+
+
+    context_dict["total_count"] = True
+    if(t_count == 0 and s_count == 0 and c_count == 0):
+        context_dict["total_count"] = False
+
+    context_dict["interactions_to_json"] = mark_safe(json.dumps(make_interaction_pie(t_count, s_count, c_count)))
+
+    #for key, value in address_dict_from.iteritems():
+        #print "the text count is " + str(value.from_text_count)
+        #print "the call count is " + str(value.from_call_count)
+
+    #print address_dict_from.viewkeys()
+    #print ""
+    #print address_dict_from.viewvalues()
+    print "##############################################"
+    print "The dates are "
+    print "##############################################"
+
+    for key, value in address_dict.iteritems():
+        value.date = str(value.date)
     for key, value in address_dict_from.iteritems():
-        print "the text count is " + str(value.from_text_count)
-        print "the call count is " + str(value.from_call_count)
-
-    print address_dict_from.viewkeys()
-    print ""
-    print address_dict_from.viewvalues()
-
+        value.date = str(value.date)
     return render(request, 'index.html', context_dict)
 
 
@@ -407,7 +476,7 @@ def settings (request, triggerword_id=''):
             print data.values()
             #website alert
             if (data.get("form_type") == 1):
-                create_flag(data.get("triggerWord"), data.get("form_type"), user)
+                create_flag(data.get("triggerWord"), C_WEBSITES, user)
                 if(data.get("active") == "select1") :
                     parent_profile.websites_active_monitoring = True
                 else:
@@ -415,7 +484,7 @@ def settings (request, triggerword_id=''):
                 parent_profile.save()
 
             if (data.get("form_type") == 2):
-                create_flag(data.get("triggerWord"), data.get("form_type"), user)
+                create_flag(data.get("triggerWord"), C_APPS, user)
                 if(data.get("active") == "select1") :
                     parent_profile.apps_active_monitoring = True
                 else:
@@ -423,7 +492,7 @@ def settings (request, triggerword_id=''):
                 parent_profile.save()
 
             if (data.get("form_type") == 3):
-                create_flag(data.get("triggerWord"), data.get("form_type"), user)
+                create_flag(data.get("triggerWord"), C_NUMBER, user)
                 if(data.get("active") == "select1") :
                     parent_profile.calls_active_monitoring = True
                 else:
@@ -431,7 +500,7 @@ def settings (request, triggerword_id=''):
                 parent_profile.save()
 
             if (data.get("form_type") == 4):
-                create_flag(data.get("triggerWord"), data.get("form_type"), user)
+                create_flag(data.get("triggerWord"), C_TEXTS, user)
                 if(data.get("active") == "select1") :
                     parent_profile.numbers_active_monitoring = True
                 else:
@@ -439,7 +508,7 @@ def settings (request, triggerword_id=''):
                 parent_profile.save()
 
             if (data.get("form_type") == 5):
-                create_flag(data.get("triggerWord"), data.get("form_type"), user)
+                create_flag(data.get("triggerWord"), C_FB, user)
 
                 if(data.get("active") == "select1") :
                     parent_profile.social_active_monitoring = True
@@ -462,11 +531,11 @@ def settings (request, triggerword_id=''):
     context_dict['calls_form'] = CallsForm()
     context_dict['apps_form'] = AppsForm()
     context_dict['sites_form'] = SitesForm()
-    context_dict['sites'] = Flags.objects.filter(owner=request.user, dataType=1)
-    context_dict['apps'] = Flags.objects.filter(owner=request.user, dataType=2)
-    context_dict['numbers'] = Flags.objects.filter(owner=request.user, dataType=3)
-    context_dict['texts'] = Flags.objects.filter(owner=request.user, dataType=4)
-    context_dict['social_posts'] = Flags.objects.filter(owner=request.user, dataType=5)
+    context_dict['sites'] = Flags.objects.filter(owner=request.user, dataType=C_WEBSITES)
+    context_dict['apps'] = Flags.objects.filter(owner=request.user, dataType=C_APPS)
+    context_dict['numbers'] = Flags.objects.filter(owner=request.user, dataType=C_NUMBER)
+    context_dict['texts'] = Flags.objects.filter(owner=request.user, dataType=C_TEXTS)
+    context_dict['social_posts'] = Flags.objects.filter(owner=request.user, dataType=C_FB)
     return render(request, 'settings.html', context_dict)
 
 @login_required
@@ -541,6 +610,23 @@ def make_alert_pie(site_count):
             dictionaries[i]["label"] = alerts[i]
     return dictionaries
 
+def make_interaction_pie(text_count, social_media_count,call_count):
+    alerts = ["Texts", "Social Media", "Calls"]
+    colors = ["#0000FF", "#46BFBD", "BDB768"]
+    percentages = []
+    dictionaries = [dict(value = 0, color="", highlight="", label="") for x in range(3)]
+
+    percentages.append(text_count)
+    percentages.append(social_media_count)
+    percentages.append(call_count)
+
+    for i in range(3):
+        dictionaries[i]["value"] = percentages[i]
+        dictionaries[i]["color"] = "#46BFBD"
+        dictionaries[i]["highlight"] = "#46BFBD"
+        dictionaries[i]["label"] = alerts[i]
+    return dictionaries
+
 def get_web_json(list):
     site_count = getSiteCount(list)
     return make_web_pie(site_count)
@@ -561,19 +647,19 @@ def createAlert(color, alert_string, icon, type, date_created, isProcessed, cont
 
 def sendGcmAlert(userProfile, alert_message):
     gcm = GCM(GCM_KEY)
-    registration_ids = [userProfile.gcm_reg_id]
-    if(userProfile.gcm_reg_id != "null"):
-        registration_ids = [userProfile.gcm_reg_id]
-        notification = {'alert' : alert_message}
-        try:
-	   response = gcm.json_request(registration_ids=registration_ids,
-	   data=notification,
-	   delay_while_idle=False)
-	except Exception as e:
-	   print e
+    parent_profile = userProfile.parent.User
+    registration_ids = []
+    ids = [userProfile.gcm_reg_id, parent_profile.gcm_reg_id]
+    for id in ids:
+        if(not id == "null"):
+            registration_ids.append(id)
+    notification = {'alert' : alert_message, 'name':userProfile.user.username}
+    try:
+       response = gcm.json_request(registration_ids=registration_ids,data=notification, delay_while_idle=False)
+       print "the gcm response is " + str(response)
+    except Exception as e:
 
-    else:
-        print userProfile.email + "does not have a gcm registration id"
+       print e
 
 def triggerCheck(dict):
 #Make the data besides the apps get the data list from the function call
@@ -586,34 +672,42 @@ def triggerCheck(dict):
     print "the type is " + str(triggerType)
     data_set = dict.get("data_set")
 
-    if(triggerType == C_APPS):
+    if(triggerType == C_APPS and parent.apps_active_monitoring ):
         apps = data_set
         trigger_list = Flags.objects.filter(owner=parent.user, dataType=C_APPS)
         for trigger in trigger_list:
             for app in apps:
-                print "the app and the trigger word are " + app.packageName + " and " + trigger.triggerWord
-		triggerHit = re.search(trigger.triggerWord, app.packageName, re.IGNORECASE)
+                print "the app and the trigger word are " + str(app.appName) + " and " + str(trigger.triggerWord)
+
+                triggerHit = re.search(trigger.triggerWord, app.appName, re.IGNORECASE)
                 if(triggerHit):
-                    sendGcmAlert(parent, "App Alert: Detected a app on the trigger list !")
+                    sendGcmAlert(teenProf, "App Alert: Detected a app on the trigger list !")
                     alert = createAlert(color= "yellow", alert_string="App Alert !", icon="ion-social-android", type=C_APPS, date_created=timezone.now(),isProcessed=False, content=app.appName, teen=teenProf)
-		    try:
-                       alert.save()
+
+                    try:
+                        alert.save()
                     except Exception as e:
-		       print e
+                        print e
                     print "App Alert: Detected a app on the trigger list !"
 
-    elif(triggerType == C_TEXTS):
+    elif(triggerType == C_TEXTS ):
         #texts = dict.get("texts")
         texts = data_set
-        trigger_list = Flags.objects.filter(owner=parent.user, dataType=C_TEXTS + 1)
+        trigger_list = Flags.objects.filter(owner=parent.user, dataType=C_TEXTS)
+        print "the trigger list is " + str(trigger_list)
+        print "the texts is " + str(texts)
         for trigger in trigger_list:
             for text in texts:
+                print "++++++++++++++++++++++++++++++++++++++"
+                print "the trigger word and the text respectively is " + str(trigger.triggerWord) + "" + str(text.content)
+                print "++++++++++++++++++++++++++++++++++++++"
                 triggerHit = re.search(trigger.triggerWord, text.content, re.IGNORECASE)
                 if(triggerHit):
-		    print "the trigger word is " + trigger.triggerWord
+
+                    print "the trigger word is " + trigger.triggerWord
                     print "the text content is " + text.content
                     print "Text Alert: Detected a text with that contains a word from trigger list !"
-                    sendGcmAlert(parent, "Text Alert: Detected a text with that contains a word from trigger list !")
+                    sendGcmAlert(teenProf, "Text Alert: Detected a text with that contains a word from trigger list !")
                     alert = createAlert(color= "red", alert_string="Text Alert !", icon="ion-android-phone-portrait", type=C_TEXTS, from_who=text.number, date_created=timezone.now(), content=text.content, isProcessed=False, teen=teenProf)
 		    try:
                        alert.save()
@@ -626,14 +720,14 @@ def triggerCheck(dict):
             for number in texts:
                 if( trigger.triggerWord.replace("-","") == str(number.number).replace("-", "")):
                     print "Text Alert: Detected a text from a number on the trigger list !"
-                    sendGcmAlert(userProf, "Text Alert: Detected a text from a number on the trigger list !")
+                    sendGcmAlert(teenProf, "Text Alert: Detected a text from a number on the trigger list !")
                     alert = createAlert(color= "green", alert_string="Number Alert !", icon="ion-android-call", from_who=number.number, type=C_NUMBER, date_created=timezone.now(), content=text.number, isProcessed=False,  teen=teenProf)
 		    try:
                        alert.save()
 		    except Exception as e:
 		       print e
 
-    elif(triggerType == C_WEBSITES):
+    elif(triggerType == C_WEBSITES and parent.websites_active_monitoring ):
         websites = data_set
 	print "the data set is " + str(data_set)
         trigger_list = Flags.objects.filter(owner=parent.user, dataType=C_WEBSITES)
@@ -645,21 +739,21 @@ def triggerCheck(dict):
                 print "the text content is " + domain.site
                 if(triggerHit):
                     print "Website Alert: Detected a visited site thats listed in trigger list !"
-                    sendGcmAlert(parent, "Website Alert: Detected a visited site thats listed in trigger list !")
+                    sendGcmAlert(teenProf, "Website Alert: Detected a visited site thats listed in trigger list !")
                     alert = createAlert(color= "blue", alert_string="Website Alert !", icon="ion-android-globe", type=C_WEBSITES, date_created=timezone.now(), content=domain.site, isProcessed=False, teen=teenProf)
 		    try:
                        alert.save()
                     except Exception as e:
                        print e
 
-    elif(triggerType == C_NUMBER):
+    elif(triggerType == C_NUMBER and parent.numbers_active_monitoring  ):
         numbers = data_set
         trigger_list = Flags.objects.filter(owner=parent.user, dataType=C_NUMBER)
         for trigger in trigger_list:
             for number in numbers:
                 #print "the number and the trigger word are " + str(number.number) + " and " + str(trigger.triggerWord)
                 if( trigger.triggerWord.replace("-", "") == str(number.number).replace("-", "") ):
-                    sendGcmAlert(parent, "Phone Call Alert: Detected a call from a number on the trigger list !")
+                    sendGcmAlert(teenProf, "Phone Call Alert: Detected a call from a number on the trigger list !")
                     alert = createAlert(color= "green", alert_string="Number Alert !", icon="ion-android-call", from_who=number.number, type=C_NUMBER, date_created=timezone.now(), content=text.number, isProcessed=False,  teen=teenProf)
 		    try:
                        alert.save()
@@ -710,6 +804,7 @@ def getAppInfo(packageName):
               }
             }
     dict = json.dumps(dict)
+    print str(dict)
     res = requests.post(_42MATTERS_URL, dict)
     try:
         result = res.json().get("results")[0]
@@ -717,6 +812,7 @@ def getAppInfo(packageName):
     except Exception as e:
         print e
         print packageName
+        print "There is no more api calls !!!"
         return {"successful" : False}
 
 def fetchAndProcess(dict):
@@ -738,7 +834,7 @@ def fetchAndProcess(dict):
                 elif(resDict.get("emo_score") == "positive"):
                     text.emo_score = 1
                 text.isProcessed = True
-		text.save()
+                text.save()
         triggerCheck(dict)
 
     elif(data_type == C_APPS):
@@ -747,16 +843,15 @@ def fetchAndProcess(dict):
             appDict = getAppInfo(packageName)
             result = appDict.get("successful",True)
      	    app.isProcessed = True
-            if(result):
-              app.contentRating = appDict.get("content_rating", "nothing")
-              app.appName  = appDict.get("title", "nothing")
-              app.siteLink  = appDict.get("website", "nothing")
-              app.description = appDict.get("description", "nothing")
-              app.marketUrl = appDict.get("market_url", "nothing")
-              #screenShot = appDict.get("screenshots", "nothing")[0]
-              app.isProcessed = True
-              triggerCheck(dict)
-	    app.save()
+            app.contentRating = appDict.get("content_rating", "N/A")
+            app.appName  = appDict.get("title", "N/A")
+            app.siteLink  = appDict.get("website", "N/A")
+            app.description = appDict.get("description", "N/A")
+            app.marketUrl = appDict.get("market_url", "N/A")
+            #screenShot = appDict.get("screenshots", "nothing")[0]
+            app.save()
+        triggerCheck(dict)
+
 
     elif(data_type == C_WEBSITES):
         #ANALYZE_WEBSITES AND MARK PROCESSED TRUE
@@ -979,8 +1074,9 @@ def getFbData(teens):
         access_token = user_profile.fb_token
         x = requests.get(FB_ME, params={'access_token':access_token})
         if (x.status_code == 200):
-            today = str(datetime.date.today())
-            dict = {"access_token":access_token,"since":today,"limit":"1000"}
+            #Due to lack of current activity on my account makeing the date earlier, but after testing revert back to original today variable
+            #today = str(datetime.date.today())
+            dict = {"access_token":access_token,"since":"2014-04-20","limit":"1000"}
             response = requests.get(FB_USER_NEWSFEED,params=dict)
             res = response.json()
             data = res.get("data")
@@ -1002,10 +1098,10 @@ def getFbData(teens):
                 score = 0
                 trigger_list = Flags.objects.filter(owner=_user, dataType=C_FB)
 
-                if(dict.get("success") == True and message):
+                if(dict.get("success") == True and message and user_profile.parent.social_active_monitoring ):
                     #checking for Trigger words in the posts
                     for trigger in trigger_list:
-                        print("The trigger word and the message respectively are " + str(trigger.triggerWord) + str(message))
+                        print("The trigger word and the message respectively are " + str(trigger.triggerWord) + " "+ str(message))
                         triggerHit = re.search(trigger.triggerWord, message, re.IGNORECASE)
                         if(triggerHit):
                             print "Social Alert: Detected a Post with that contains a word from trigger list !"
@@ -1019,7 +1115,7 @@ def getFbData(teens):
                         score = 1
 
                 try:
-                    FbPosts.objects.update_or_create(creator=name, date_created=date, emo_score=int(score), id=str(id), owner=_user, message=message)
+                    FbPosts.objects.update_or_create(creator=name, date_created=date, emo_score=int(score), id=str(id), owner=user_profile.user, message=message)
                 except Exception as e:
                     print e.message
         else:
@@ -1149,7 +1245,7 @@ def ping_checker(request):
                         y.save()
                 if(len(Pings.objects.filter(hit=False, owner=teen.user)) >= 3):
                     print "Potential App Bypass Warning ! :"
-                    sendGcmAlert(teen.parent.User, "Potential App Bypass Warning ! : The app has been unresponsive for the past three hours")
+                    sendGcmAlert(teen, "Potential App Bypass Warning ! : The app has been unresponsive for the past three hours")
         except Exception as e:
             print e
         return HttpResponse("successfully checked pings for entire database !")
@@ -1433,6 +1529,8 @@ def processApps(teens):
 
    for teen in teens:
       if teen.parent:
+          print "+++++++++++++++++++++++"
+          print "the teen is " + str(teen)
           apps= App_list.objects.filter(isProcessed=False, owner=teen.user)
           dict = {'data_set' : apps}
           dict["data_type"] = C_APPS
@@ -1649,7 +1747,7 @@ def processAllData(request):
 
    teens = UserProfile.objects.filter(isTeenager=True)
    print "Data would be getting processed right now"
-   processTexts(teens)
+   #processTexts(teens)
    processApps(teens)
    processSites(teens)
    processNumbers(teens)
@@ -1710,53 +1808,52 @@ class address:
         self.to_social_count = to_social_count
 
 def total_interactions(request):
-    context_dict = {"name":request.user.username}
 
     user = request.user
-    if (user.User.isTeenager):
+    is_teen = True
+    if(user.User.isTeenager):
         teen = user.User
     else:
         teen = UserProfile.objects.filter(parent=user)[0]
+        is_teen = False
 
+    if(request.method == "POST"):
+        teen_id = request.POST.get("teen_id")
+        if(teen_id):
+            print teen_id
+            teen = UserProfile.objects.get(id=teen_id)
+
+    parent = teen.parent
+    context_dict = {"name":request.user.username}
+    context_dict["parents_teens"] = UserProfile.objects.filter(parent=parent)
     context_dict["teen"] = teen
-
     context_dict["call_log_list"] = Phone_Calls.objects.filter(owner=teen.user)
-    print len(context_dict)
+    context_dict["is_teen"] = is_teen
+    #print len(context_dict)
     log_list = context_dict["call_log_list"]
-
-    print len(log_list)
-
-    for i in context_dict["call_log_list"]:
-        if i.contact == "Unknown":
-            print "this is null"
-        else:
-            print i.contact
-
+    #print len(log_list)
+    #for i in context_dict["call_log_list"]:
+    #    if i.contact == "Unknown":
+            #print "this is null"
+    #    else:
+            #print i.contact
 
     context_dict["text_list"] = Texts.objects.filter(owner=teen.user)
     text_list = context_dict["text_list"]
-
     print len(text_list)
-
     # loop through the texts, if there is no associated contact, get the address
     context_dict["text_address_list_to"] = []
     context_dict["text_address_list_from"] = []
-
     addresses = []
     address_dict = {}
     myaddress = address(0,0,0,0,0,0,0)
     address_dict_from = {}
-
-
     # need address object
-
-
     for i in text_list:
 
         # if text is sent from teen
         if i.text_type == 2 or i.text_type == 5:
             myaddress = address(0,0,0,0,0,0,0)
-
             # if there is no name association with the text
             if i.contact is None:
                 myaddress.name = str(i.number)
@@ -1792,9 +1889,8 @@ def total_interactions(request):
     #print(len(addresses))
     context_dict["my_addresses"] = address_dict
     context_dict["my_from_addresses"] = address_dict_from
-    for key, value in address_dict.iteritems():
-        print value.name, value.to_text_count
+    #for key, value in address_dict.iteritems():
+        #print value.name, value.to_text_count
 
     #print(len(context_dict["my_addresses"]))
-
     return render(request, 'total_interactions.html', context_dict)
