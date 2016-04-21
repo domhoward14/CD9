@@ -306,9 +306,9 @@ def index(request, alert_id="null"):
 
 #parsing the social_media_list
     for i in social_media_list:
-        print "++++++++++++++++++++++++++++++++++++++++"
-        print "The username and the creator respectively are " + str(user.username) + str(i.creator)
-        print "++++++++++++++++++++++++++++++++++++++++"
+    #    print "++++++++++++++++++++++++++++++++++++++++"
+    #    print "The username and the creator respectively are " + str(user.username) + str(i.creator)
+    #    print "++++++++++++++++++++++++++++++++++++++++"
         # if Post is not sent from teen
         if user.username != i.creator:
             myaddress = address(0,0,0,0,0,0,0)
@@ -398,13 +398,13 @@ def index(request, alert_id="null"):
     #print ""
     #print address_dict_from.viewvalues()
     print "##############################################"
-    print "The dates are "
+    print "The counts are "
     print "##############################################"
 
     for key, value in address_dict.iteritems():
-        value.date = str(value.date)
+        print value.to_call_count
     for key, value in address_dict_from.iteritems():
-        value.date = str(value.date)
+        print value.from_call_count
     return render(request, 'index.html', context_dict)
 
 
@@ -682,13 +682,8 @@ def triggerCheck(dict):
                 triggerHit = re.search(trigger.triggerWord, app.appName, re.IGNORECASE)
                 if(triggerHit):
                     sendGcmAlert(teenProf, "App Alert: Detected a app on the trigger list !")
-                    alert = createAlert(color= "yellow", alert_string="App Alert !", icon="ion-social-android", type=C_APPS, date_created=timezone.now(),isProcessed=False, content=app.appName, teen=teenProf)
+                    createAlert(color= "yellow", alert_string="App Alert !", icon="ion-social-android", type=C_APPS, date_created=timezone.now(),isProcessed=False, content=app.appName, teen=teenProf)
 
-                    try:
-                        alert.save()
-                    except Exception as e:
-                        print e
-                    print "App Alert: Detected a app on the trigger list !"
 
     elif(triggerType == C_TEXTS ):
         #texts = dict.get("texts")
@@ -708,11 +703,8 @@ def triggerCheck(dict):
                     print "the text content is " + text.content
                     print "Text Alert: Detected a text with that contains a word from trigger list !"
                     sendGcmAlert(teenProf, "Text Alert: Detected a text with that contains a word from trigger list !")
-                    alert = createAlert(color= "red", alert_string="Text Alert !", icon="ion-android-phone-portrait", type=C_TEXTS, from_who=text.number, date_created=timezone.now(), content=text.content, isProcessed=False, teen=teenProf)
-		    try:
-                       alert.save()
-                    except Exception as e:
-                       print e
+                    createAlert(color= "red", alert_string="Text Alert !", icon="ion-android-phone-portrait", type=C_TEXTS, from_who=text.number, date_created=timezone.now(), content=text.content, isProcessed=False, teen=teenProf)
+
         print " it got here and the dataset is " + str(data_set)
 
         trigger_list = Flags.objects.filter(owner=parent.user, dataType=C_NUMBER)
@@ -721,11 +713,8 @@ def triggerCheck(dict):
                 if( trigger.triggerWord.replace("-","") == str(number.number).replace("-", "")):
                     print "Text Alert: Detected a text from a number on the trigger list !"
                     sendGcmAlert(teenProf, "Text Alert: Detected a text from a number on the trigger list !")
-                    alert = createAlert(color= "green", alert_string="Number Alert !", icon="ion-android-call", from_who=number.number, type=C_NUMBER, date_created=timezone.now(), content=text.number, isProcessed=False,  teen=teenProf)
-		    try:
-                       alert.save()
-		    except Exception as e:
-		       print e
+                    createAlert(color= "green", alert_string="Number Alert !", icon="ion-android-call", from_who=number.number, type=C_NUMBER, date_created=timezone.now(), content=text.number, isProcessed=False,  teen=teenProf)
+
 
     elif(triggerType == C_WEBSITES and parent.websites_active_monitoring ):
         websites = data_set
@@ -735,16 +724,13 @@ def triggerCheck(dict):
         for trigger in trigger_list:
             for domain in websites:
                 triggerHit = re.search(trigger.triggerWord, domain.site, re.IGNORECASE)
-		print "the trigger word is " + trigger.triggerWord
+
+                print "the trigger word is " + trigger.triggerWord
                 print "the text content is " + domain.site
                 if(triggerHit):
                     print "Website Alert: Detected a visited site thats listed in trigger list !"
                     sendGcmAlert(teenProf, "Website Alert: Detected a visited site thats listed in trigger list !")
-                    alert = createAlert(color= "blue", alert_string="Website Alert !", icon="ion-android-globe", type=C_WEBSITES, date_created=timezone.now(), content=domain.site, isProcessed=False, teen=teenProf)
-		    try:
-                       alert.save()
-                    except Exception as e:
-                       print e
+                    createAlert(color= "blue", alert_string="Website Alert !", icon="ion-android-globe", type=C_WEBSITES, date_created=timezone.now(), content=domain.site, isProcessed=False, teen=teenProf)
 
     elif(triggerType == C_NUMBER and parent.numbers_active_monitoring  ):
         numbers = data_set
@@ -754,11 +740,7 @@ def triggerCheck(dict):
                 #print "the number and the trigger word are " + str(number.number) + " and " + str(trigger.triggerWord)
                 if( trigger.triggerWord.replace("-", "") == str(number.number).replace("-", "") ):
                     sendGcmAlert(teenProf, "Phone Call Alert: Detected a call from a number on the trigger list !")
-                    alert = createAlert(color= "green", alert_string="Number Alert !", icon="ion-android-call", from_who=number.number, type=C_NUMBER, date_created=timezone.now(), content=text.number, isProcessed=False,  teen=teenProf)
-		    try:
-                       alert.save()
-                    except Exception as e:
-                       print e
+                    alert = createAlert(color= "green", alert_string="Number Alert !", icon="ion-android-call", from_who=number.number, type=C_NUMBER, date_created=timezone.now(), content=number.number, isProcessed=False,  teen=teenProf)
                     print "Phone Call Alert: Detected a call from a number on the trigger list !"
 
 """
@@ -1747,9 +1729,9 @@ def processAllData(request):
 
    teens = UserProfile.objects.filter(isTeenager=True)
    print "Data would be getting processed right now"
-   #processTexts(teens)
+   processTexts(teens)
    processApps(teens)
-   processSites(teens)
+   #processSites(teens)
    processNumbers(teens)
    getFbData(teens)
    #getGmail(teens)

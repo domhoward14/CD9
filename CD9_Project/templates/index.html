@@ -406,9 +406,9 @@ th, td {
       <tr>
         <td>{{value.name}}</td>
         <td>{{value.date}}</td>
-        <td>{{value.to_text_count}}</td>
-        <td>{{value.to_call_count}}</td>
-        <td>{{value.to_social_count}}</td>
+        <td>{{value.from_text_count}}</td>
+        <td>{{value.from_call_count}}</td>
+        <td>{{value.from_social_count}}</td>
       </tr>
 
       {% endfor %}
@@ -433,8 +433,8 @@ th, td {
     <tr>
       <td>{{value.name}}</td>
       <td>{{value.date}}</td>
-      <td>{{value.from_text_count}}</td>
-      <td>{{value.from_call_count}}</td>
+      <td>{{value.to_text_count}}</td>
+      <td>{{value.to_call_count}}</td>
       <td>0</td>
     </tr>
     {% endfor %}
